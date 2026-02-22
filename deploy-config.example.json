@@ -1,0 +1,12 @@
+{
+  "remoteHost": "assets.stellarinfomatica.com",
+  "remoteUser": "your-username",
+  "remotePath": "/domains/stellarinfomatica.com/public_html/assets",
+  "localDist": "./frontend/dist",
+  "buildCommand": "cd frontend && npm run build",
+  "excludePatterns": [
+    ".DS_Store",
+    ".git",
+    "*.map"
+  ]
+}

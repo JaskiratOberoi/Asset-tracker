@@ -1,0 +1,235 @@
+services:
+  # Postgres Database
+  db:
+    image: supabase/postgres:15.1.0.147
+    container_name: supabase_db_asset_tracker
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -h localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    ports:
+      - "25432:5432"
+    environment:
+      POSTGRES_HOST: /var/run/postgresql
+      PGPORT: 5432
+      POSTGRES_PORT: 5432
+      PGDATABASE: postgres
+      POSTGRES_DB: postgres
+      PGUSER: postgres
+      POSTGRES_USER: postgres
+      PGPASSWORD: ${POSTGRES_PASSWORD:-your-super-secret-and-long-postgres-password}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-your-super-secret-and-long-postgres-password}
+      JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-token-with-at-least-32-characters-long}
+      JWT_EXP: ${JWT_EXP:-3600}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - supabase_network
+
+  # Supabase Studio (Admin UI)
+  studio:
+    image: supabase/studio:latest
+    container_name: supabase_studio_asset_tracker
+    ports:
+      - "3001:3000"
+    environment:
+      STUDIO_PG_META_URL: http://meta:8080
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-your-super-secret-and-long-postgres-password}
+      DEFAULT_ORGANIZATION_NAME: ${DEFAULT_ORGANIZATION_NAME:-Asset Tracker}
+      DEFAULT_PROJECT_NAME: ${DEFAULT_PROJECT_NAME:-asset-tracker}
+      SUPABASE_URL: http://kong:8000
+      SUPABASE_PUBLIC_URL: http://localhost:8000
+      SUPABASE_ANON_KEY: ${ANON_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE4MDMyMDQ1NDF9.Zjp54s-IyfdfyB2z0veijDFJgMZmunXmqHXkD94gWHs}
+      SUPABASE_SERVICE_KEY: ${SERVICE_ROLE_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTgwMzIwNDk5NX0.AGxew6fw_FsuAEOHP3u2WbxJh1SEMhHcXKLLoXdo1UI}
+    depends_on:
+      - meta
+      - kong
+    restart: unless-stopped
+    networks:
+      - supabase_network
+
+  # Postgres Meta (Database introspection)
+  meta:
+    image: supabase/postgres-meta:v0.80.0
+    container_name: supabase_meta_asset_tracker
+    ports:
+      - "8081:8080"
+    environment:
+      PG_META_PORT: 8080
+      PG_META_DB_HOST: db
+      PG_META_DB_PORT: 5432
+      PG_META_DB_NAME: postgres
+      PG_META_DB_USER: postgres
+      PG_META_DB_PASSWORD: ${POSTGRES_PASSWORD:-your-super-secret-and-long-postgres-password}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - supabase_network
+
+  # Kong API Gateway
+  kong:
+    image: kong:2.8.1
+    container_name: supabase_kong_asset_tracker
+    ports:
+      - "8000:8000"
+      - "8444:8443"
+    environment:
+      KONG_DATABASE: "off"
+      KONG_DECLARATIVE_CONFIG: /var/lib/kong/kong.yml
+      KONG_DNS_ORDER: LAST,A,CNAME
+      KONG_PLUGINS: request-transformer,cors,key-auth,acl
+      KONG_NGINX_PROXY_PROXY_BUFFER_SIZE: 160k
+      KONG_NGINX_PROXY_PROXY_BUFFERS: 64 160k
+    volumes:
+      - ./supabase/kong.yml:/var/lib/kong/kong.yml:ro
+    depends_on:
+      - auth
+      - rest
+      - storage
+      - realtime
+    restart: unless-stopped
+    networks:
+      - supabase_network
+
+  # GoTrue (Auth Service)
+  auth:
+    image: supabase/gotrue:v2.99.0
+    container_name: supabase_auth_asset_tracker
+    ports:
+      - "9999:9999"
+    environment:
+      GOTRUE_API_HOST: 0.0.0.0
+      GOTRUE_API_PORT: 9999
+      API_EXTERNAL_URL: http://localhost:8000
+      GOTRUE_DB_DRIVER: postgres
+      GOTRUE_DB_DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:-your-super-secret-and-long-postgres-password}@db:5432/postgres
+      GOTRUE_SITE_URL: http://localhost:3001
+      GOTRUE_URI_ALLOW_LIST: "*"
+      GOTRUE_DISABLE_SIGNUP: false
+      GOTRUE_JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-token-with-at-least-32-characters-long}
+      GOTRUE_JWT_EXP: ${JWT_EXP:-3600}
+      GOTRUE_JWT_DEFAULT_GROUP_NAME: authenticated
+      GOTRUE_EXTERNAL_EMAIL_ENABLED: true
+      GOTRUE_MAILER_AUTOCONFIRM: true
+      GOTRUE_SMS_AUTOCONFIRM: true
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - supabase_network
+
+  # PostgREST (REST API)
+  rest:
+    image: postgrest/postgrest:v11.2.0
+    container_name: supabase_rest_asset_tracker
+    # Port not exposed externally - accessed via Kong gateway
+    # ports:
+    #   - "3001:3000"
+    environment:
+      PGRST_DB_URI: postgres://postgres:${POSTGRES_PASSWORD:-your-super-secret-and-long-postgres-password}@db:5432/postgres
+      PGRST_DB_SCHEMAS: public,storage,graphql_public
+      PGRST_DB_ANON_ROLE: anon
+      PGRST_JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-token-with-at-least-32-characters-long}
+      PGRST_DB_USE_LEGACY_GUCS: "false"
+      PGRST_APP_SETTINGS_JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-token-with-at-least-32-characters-long}
+      PGRST_APP_SETTINGS_JWT_EXP: ${JWT_EXP:-3600}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - supabase_network
+
+  # Storage Service
+  storage:
+    image: supabase/storage-api:v1.7.1
+    container_name: supabase_storage_asset_tracker
+    ports:
+      - "5000:5000"
+    environment:
+      ANON_KEY: ${ANON_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE4MDMyMDQ1NDF9.Zjp54s-IyfdfyB2z0veijDFJgMZmunXmqHXkD94gWHs}
+      SERVICE_KEY: ${SERVICE_ROLE_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTgwMzIwNDk5NX0.AGxew6fw_FsuAEOHP3u2WbxJh1SEMhHcXKLLoXdo1UI}
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-your-super-secret-and-long-postgres-password}
+      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:-your-super-secret-and-long-postgres-password}@db:5432/postgres
+      POSTGRES_POOL_SIZE: 10
+      FILE_SIZE_LIMIT: 52428800
+      STORAGE_BACKEND: file
+      FILE_STORAGE_BACKEND_PATH: /var/lib/storage
+      TENANT_ID: stub
+      REGION: stub
+      GLOBAL_S3_BUCKET: stub
+      ENABLE_IMAGE_TRANSFORMATION: "true"
+      IMGPROXY_URL: http://imgproxy:5001
+      PGRST_JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-token-with-at-least-32-characters-long}
+    depends_on:
+      db:
+        condition: service_healthy
+      imgproxy:
+        condition: service_started
+    volumes:
+      - storage_data:/var/lib/storage
+    restart: unless-stopped
+    networks:
+      - supabase_network
+
+  # Image Proxy
+  imgproxy:
+    image: darthsim/imgproxy:v3.8.0
+    container_name: supabase_imgproxy_asset_tracker
+    ports:
+      - "5001:5000"
+    environment:
+      IMGPROXY_BIND: ":5000"
+      IMGPROXY_LOCAL_FILESYSTEM_ROOT: /
+      IMGPROXY_USE_ETAG: "true"
+      IMGPROXY_ENABLE_WEBP_DETECTION: ${IMGPROXY_ENABLE_WEBP_DETECTION:-true}
+    volumes:
+      - storage_data:/var/lib/storage:ro
+    restart: unless-stopped
+    networks:
+      - supabase_network
+
+  # Realtime Service
+  realtime:
+    image: supabase/realtime:v2.25.35
+    container_name: supabase_realtime_asset_tracker
+    ports:
+      - "4001:4000"
+    environment:
+      PORT: 4000
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-your-super-secret-and-long-postgres-password}
+      DB_NAME: postgres
+      DB_AFTER_CONNECT_QUERY: 'SET search_path TO _realtime'
+      DB_ENC_KEY: supabaserealtime
+      API_JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-token-with-at-least-32-characters-long}
+      FLY_ALLOC_ID: fly123
+      FLY_APP_NAME: realtime
+      SECURE_CHANNELS: "true"
+      JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-token-with-at-least-32-characters-long}
+      SECRET_KEY_BASE: ${SECRET_KEY_BASE:-your-super-secret-key-base-with-at-least-64-characters-long-for-realtime-service}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - supabase_network
+
+volumes:
+  db_data:
+  storage_data:
+
+networks:
+  supabase_network:
+    driver: bridge
