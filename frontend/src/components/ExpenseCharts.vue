@@ -196,7 +196,7 @@ onMounted(async () => {
         </div>
       </div>
       <div v-else class="h-80">
-        <Bar :data="barChartData" :options="chartOptions" />
+        <Bar :data="barChartData" :options="(chartOptions as any)" />
       </div>
     </div>
 
@@ -225,7 +225,7 @@ onMounted(async () => {
         </div>
       </div>
       <div v-else class="h-80">
-        <Doughnut :data="doughnutChartData" :options="chartOptions" />
+        <Doughnut :data="doughnutChartData" :options="(chartOptions as any)" />
       </div>
     </div>
   </div>

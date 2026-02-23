@@ -141,9 +141,9 @@ const validateCurrentStep = (): boolean => {
     return true
   } catch (error) {
     if (error instanceof z.ZodError) {
-      error.errors.forEach((err) => {
-        if (err.path[0]) {
-          errors.value[err.path[0].toString()] = err.message
+      error.issues.forEach((issue: z.ZodIssue) => {
+        if (issue.path[0]) {
+          errors.value[issue.path[0].toString()] = issue.message
         }
       })
     }
@@ -230,22 +230,23 @@ const submitForm = async () => {
         billFile: undefined
       }
       selectedFileName.value = ''
+      if (fileInput.value) (fileInput.value as HTMLInputElement).value = ''
       currentStep.value = 1
       submitSuccess.value = false
       uploadProgress.value = 0
     }, 3000)
     
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Submit error:', error)
     
     if (error instanceof z.ZodError) {
-      error.errors.forEach((err) => {
-        if (err.path[0]) {
-          errors.value[err.path[0].toString()] = err.message
+      error.issues.forEach((issue: z.ZodIssue) => {
+        if (issue.path[0]) {
+          errors.value[issue.path[0].toString()] = issue.message
         }
       })
       submitError.value = 'Please check the form for errors'
-    } else if (error?.message) {
+    } else if (error instanceof Error && error.message) {
       submitError.value = error.message
     } else if (typeof error === 'string') {
       submitError.value = error

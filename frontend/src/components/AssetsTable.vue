@@ -25,7 +25,7 @@ const handleViewBill = async (fileId: string) => {
   try {
     const url = await getFileViewUrl(fileId)
     window.open(url, '_blank')
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Failed to load file:', err)
   }
 }
