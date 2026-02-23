@@ -19,8 +19,16 @@ async function runMigrations() {
   const files = fs.readdirSync(migrationsDir).filter((f) => f.endsWith('.sql')).sort();
   for (const file of files) {
     const sql = fs.readFileSync(path.join(migrationsDir, file), 'utf8');
-    await pool.query(sql);
-    console.log('Ran migration:', file);
+    try {
+      await pool.query(sql);
+      console.log('Ran migration:', file);
+    } catch (e) {
+      if (e.code === '42P07' || e.code === '42710') {
+        console.log('Skipped (already applied):', file);
+      } else {
+        throw e;
+      }
+    }
   }
 }
 
@@ -98,12 +106,8 @@ async function start() {
   try {
     await runMigrations();
   } catch (e) {
-    if (e.code === '42P07') {
-      console.log('Tables already exist, skipping migrations');
-    } else {
-      console.error('Migration error:', e);
-      process.exit(1);
-    }
+    console.error('Migration error:', e);
+    process.exit(1);
   }
   app.listen(PORT, () => console.log('API listening on port', PORT));
 }
