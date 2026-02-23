@@ -8,6 +8,10 @@ import { gsap } from 'gsap'
 const assetSchema = z.object({
   name: z.string().min(1, 'Asset name is required').max(255, 'Asset name is too long'),
   description: z.string().optional(),
+  cost: z.union([
+    z.literal(''),
+    z.coerce.number().nonnegative('Cost must be zero or positive')
+  ]).optional().transform((v) => (v === '' || v === undefined ? undefined : Number(v))),
   serialNumber: z.string().max(100, 'Serial number is too long').optional().or(z.literal('')),
   companyId: z.string().uuid('Please select a valid company'),
   locationId: z.string().uuid('Please select a valid location').optional(),
@@ -22,6 +26,7 @@ const totalSteps = 3
 const formData = ref<Partial<AssetForm>>({
   name: '',
   description: '',
+  cost: undefined,
   serialNumber: '',
   companyId: '',
   locationId: undefined,
@@ -198,6 +203,7 @@ const submitForm = async () => {
     const dataToValidate = {
       name: formData.value.name || '',
       description: formData.value.description || undefined,
+      cost: formData.value.cost,
       serialNumber: formData.value.serialNumber || undefined,
       companyId: formData.value.companyId || '',
       locationId: formData.value.locationId || undefined,
@@ -210,6 +216,9 @@ const submitForm = async () => {
     fd.append('name', validatedData.name)
     fd.append('companyId', validatedData.companyId)
     if (validatedData.description) fd.append('description', validatedData.description)
+    if (validatedData.cost != null && validatedData.cost !== '' && !Number.isNaN(Number(validatedData.cost))) {
+      fd.append('cost', String(validatedData.cost))
+    }
     if (validatedData.serialNumber?.trim()) fd.append('serialNumber', validatedData.serialNumber.trim())
     if (validatedData.locationId) fd.append('locationId', validatedData.locationId)
     if (validatedData.billFile && validatedData.billFile instanceof File) {
@@ -224,6 +233,7 @@ const submitForm = async () => {
       formData.value = {
         name: '',
         description: '',
+        cost: undefined,
         serialNumber: '',
         companyId: '',
         locationId: undefined,
@@ -415,6 +425,35 @@ onMounted(async () => {
                     Description (optional)
                   </label>
                 </div>
+              </div>
+              
+              <!-- Price / Cost with Floating Label -->
+              <div class="relative">
+                <div class="relative">
+                  <input
+                    v-model="formData.cost"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    @focus="handleFocus('cost')"
+                    @blur="handleBlur('cost')"
+                    class="w-full px-4 pt-6 pb-2 bg-white border border-slate-300 rounded-lg text-gray-900 placeholder-transparent focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 text-base font-medium"
+                    :class="{ 'border-red-300 focus:border-red-500 focus:ring-red-500': errors.cost }"
+                    placeholder="0.00"
+                  />
+                  <label 
+                    class="absolute left-4 transition-all duration-200 pointer-events-none"
+                    :class="isFocused.cost || hasValue('cost') ? 'top-2 text-xs text-slate-500 font-medium' : 'top-4 text-sm text-slate-500'"
+                  >
+                    Price / Cost (optional)
+                  </label>
+                </div>
+                <p v-if="errors.cost" class="mt-2 text-sm text-red-600 flex items-center">
+                  <svg class="w-4 h-4 mr-1.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                  </svg>
+                  {{ errors.cost }}
+                </p>
               </div>
               
               <!-- Serial Number with Floating Label -->

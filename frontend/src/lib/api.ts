@@ -127,10 +127,17 @@ export async function acknowledgeAsset(id: string) {
   return res.json()
 }
 
-export async function updateAsset(
-  id: string,
-  payload: { description?: string; serial_number?: string | null }
-) {
+export interface UpdateAssetPayload {
+  name?: string
+  description?: string
+  cost?: number | null
+  serial_number?: string | null
+  company_id?: string
+  location_id?: string | null
+  acknowledged?: boolean
+}
+
+export async function updateAsset(id: string, payload: UpdateAssetPayload) {
   const res = await fetch(`${BASE_URL}/api/assets/${id}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', ...getHeaders(true) },
@@ -159,6 +166,14 @@ export async function getAssetCountByCompany() {
     headers: getHeaders(true)
   })
   if (!res.ok) throw new Error('Failed to load counts')
+  return res.json()
+}
+
+export async function getSpendsByCompany(): Promise<Array<{ id: string; name: string; totalSpend: number }>> {
+  const res = await fetch(`${BASE_URL}/api/assets/spends-by-company`, {
+    headers: getHeaders(true)
+  })
+  if (!res.ok) throw new Error('Failed to load spends')
   return res.json()
 }
 

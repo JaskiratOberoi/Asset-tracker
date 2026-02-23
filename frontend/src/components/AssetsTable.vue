@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-import { getAssets, getFileViewUrl, acknowledgeAsset, deleteAsset, updateAsset } from '../lib/api'
+import { getAssets, getFileViewUrl, acknowledgeAsset, deleteAsset, updateAsset, getCompanies, getLocations } from '../lib/api'
 import { gsap } from 'gsap'
 
 interface Asset {
@@ -27,16 +27,38 @@ const isDeleting = ref(false)
 const isAcknowledging = ref<string | null>(null)
 const isAcknowledgingAll = ref(false)
 const isEditingInModal = ref(false)
+const editName = ref('')
 const editDescription = ref('')
 const editSerialNumber = ref('')
+const editCompanyId = ref('')
+const editLocationId = ref('')
+const editAcknowledged = ref(false)
 const isSavingAsset = ref(false)
 const modalError = ref<string | null>(null)
+
+const companies = ref<Array<{ id: string; name: string }>>([])
+const locations = ref<Array<{ id: string; name: string; company_id: string }>>([])
+
+const locationsForSelectedCompany = computed(() => {
+  const companyId = isEditingInModal.value ? editCompanyId.value : selectedAsset.value?.company_id
+  if (!companyId) return []
+  return locations.value.filter((l) => l.company_id === companyId)
+})
+
+const syncEditFromAsset = () => {
+  if (!selectedAsset.value) return
+  editName.value = selectedAsset.value.name
+  editDescription.value = selectedAsset.value.details?.description ?? ''
+  editSerialNumber.value = selectedAsset.value.serial_number ?? ''
+  editCompanyId.value = selectedAsset.value.company_id
+  editLocationId.value = selectedAsset.value.location_id ?? ''
+  editAcknowledged.value = !!selectedAsset.value.acknowledged_at
+}
 
 const openDetailModal = (asset: Asset) => {
   selectedAsset.value = asset
   isEditingInModal.value = false
-  editDescription.value = asset.details?.description ?? ''
-  editSerialNumber.value = asset.serial_number ?? ''
+  syncEditFromAsset()
   modalError.value = null
 }
 
@@ -48,8 +70,7 @@ const closeDetailModal = () => {
 
 const startEditInModal = () => {
   if (!selectedAsset.value) return
-  editDescription.value = selectedAsset.value.details?.description ?? ''
-  editSerialNumber.value = selectedAsset.value.serial_number ?? ''
+  syncEditFromAsset()
   modalError.value = null
   isEditingInModal.value = true
 }
@@ -59,22 +80,52 @@ const cancelEditInModal = () => {
   modalError.value = null
 }
 
+const onEditCompanyChange = () => {
+  const locs = locationsForSelectedCompany.value
+  const stillValid = locs.some((l) => l.id === editLocationId.value)
+  if (!stillValid) editLocationId.value = locs[0]?.id ?? ''
+}
+
 const saveAssetEdits = async () => {
   if (!selectedAsset.value) return
+  if (!editName.value.trim()) {
+    modalError.value = 'Asset name is required'
+    return
+  }
   modalError.value = null
   isSavingAsset.value = true
   try {
     const updated = await updateAsset(selectedAsset.value.id, {
+      name: editName.value.trim(),
       description: editDescription.value.trim(),
-      serial_number: editSerialNumber.value.trim() || null
+      serial_number: editSerialNumber.value.trim() || null,
+      company_id: editCompanyId.value || undefined,
+      location_id: editLocationId.value || null,
+      acknowledged: editAcknowledged.value
     })
     const a = assets.value.find((x) => x.id === selectedAsset.value!.id)
     if (a) {
+      a.name = updated.name
       a.details = updated.details
       a.serial_number = updated.serial_number
+      a.company_id = updated.company_id
+      a.location_id = updated.location_id
+      a.acknowledged_at = updated.acknowledged_at
+      const company = companies.value.find((c) => c.id === updated.company_id)
+      const loc = locations.value.find((l) => l.id === updated.location_id)
+      a.companies = company ? { name: company.name } : undefined
+      a.locations = loc ? { name: loc.name } : undefined
     }
+    selectedAsset.value.name = updated.name
     selectedAsset.value.details = updated.details
     selectedAsset.value.serial_number = updated.serial_number
+    selectedAsset.value.company_id = updated.company_id
+    selectedAsset.value.location_id = updated.location_id
+    selectedAsset.value.acknowledged_at = updated.acknowledged_at
+    const company = companies.value.find((c) => c.id === updated.company_id)
+    const loc = locations.value.find((l) => l.id === updated.location_id)
+    selectedAsset.value.companies = company ? { name: company.name } : undefined
+    selectedAsset.value.locations = loc ? { name: loc.name } : undefined
     isEditingInModal.value = false
   } catch (err: unknown) {
     modalError.value = (err instanceof Error ? err.message : null) || 'Failed to update asset'
@@ -162,8 +213,7 @@ const loadAssets = async () => {
 }
 
 onMounted(async () => {
-  await loadAssets()
-
+  await Promise.all([loadAssets(), getCompanies().then((r) => { companies.value = r }), getLocations().then((r) => { locations.value = r })])
   if (tableContainer.value) {
     gsap.from(tableContainer.value.querySelectorAll('tr'), {
       opacity: 0,
@@ -337,13 +387,13 @@ onMounted(async () => {
       aria-labelledby="detail-modal-title"
       @click.self="closeDetailModal"
     >
-      <div class="bg-white rounded-xl shadow-xl max-w-lg w-full p-6">
+      <div class="bg-white rounded-xl shadow-xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
         <div class="flex justify-between items-start mb-6">
           <div>
             <h2 id="detail-modal-title" class="text-lg font-semibold text-slate-900">
-              {{ selectedAsset.name }}
+              {{ isEditingInModal ? editName : selectedAsset.name }}
             </h2>
-            <p v-if="isEditingInModal" class="text-xs text-indigo-600 font-medium mt-1">Editing description & serial number</p>
+            <p v-if="isEditingInModal" class="text-xs text-indigo-600 font-medium mt-1">Editing all fields</p>
           </div>
           <button
             type="button"
@@ -361,11 +411,23 @@ onMounted(async () => {
         </div>
         <dl class="space-y-4">
           <div>
+            <dt class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Asset name</dt>
+            <dd v-if="!isEditingInModal" class="text-sm text-slate-700 min-h-[2.5rem] py-1">{{ selectedAsset.name }}</dd>
+            <dd v-else>
+              <input
+                v-model="editName"
+                type="text"
+                class="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                placeholder="Asset name"
+              />
+            </dd>
+          </div>
+          <div>
             <dt class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Description</dt>
             <dd v-if="!isEditingInModal" class="text-sm text-slate-700 min-h-[2.5rem] py-1">
               {{ selectedAsset.details?.description || '—' }}
             </dd>
-            <dd v-else class="space-y-0">
+            <dd v-else>
               <textarea
                 v-model="editDescription"
                 rows="3"
@@ -390,20 +452,73 @@ onMounted(async () => {
             </dd>
           </div>
           <div>
+            <dt class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Company</dt>
+            <dd v-if="!isEditingInModal" class="text-sm text-slate-700 min-h-[2.5rem] py-1">
+              {{ (selectedAsset.companies as any)?.name || '—' }}
+            </dd>
+            <dd v-else>
+              <select
+                v-model="editCompanyId"
+                @change="onEditCompanyChange"
+                class="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              >
+                <option value="">Select company</option>
+                <option v-for="c in companies" :key="c.id" :value="c.id">{{ c.name }}</option>
+              </select>
+            </dd>
+          </div>
+          <div>
+            <dt class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Location</dt>
+            <dd v-if="!isEditingInModal" class="text-sm text-slate-700 min-h-[2.5rem] py-1">
+              {{ (selectedAsset.locations as any)?.name || '—' }}
+            </dd>
+            <dd v-else>
+              <select
+                v-model="editLocationId"
+                class="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              >
+                <option value="">Select location</option>
+                <option v-for="l in locationsForSelectedCompany" :key="l.id" :value="l.id">{{ l.name }}</option>
+              </select>
+            </dd>
+          </div>
+          <div>
             <dt class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Status</dt>
-            <dd>
+            <dd v-if="!isEditingInModal">
               <span
                 v-if="selectedAsset.acknowledged_at"
                 class="inline-flex items-center px-3 py-1 rounded-lg text-sm font-semibold bg-green-100 text-green-800"
+              >Acknowledged</span>
+              <span v-else class="inline-flex items-center px-3 py-1 rounded-lg text-sm font-semibold bg-amber-100 text-amber-800">Pending</span>
+            </dd>
+            <dd v-else>
+              <select
+                v-model="editAcknowledged"
+                class="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
               >
-                Acknowledged
-              </span>
-              <span
-                v-else
-                class="inline-flex items-center px-3 py-1 rounded-lg text-sm font-semibold bg-amber-100 text-amber-800"
+                <option :value="false">Pending</option>
+                <option :value="true">Acknowledged</option>
+              </select>
+            </dd>
+          </div>
+          <div>
+            <dt class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Created</dt>
+            <dd class="text-sm text-slate-700 py-1">
+              {{ new Date(selectedAsset.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) }}
+            </dd>
+          </div>
+          <div>
+            <dt class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Bill</dt>
+            <dd class="text-sm py-1">
+              <button
+                v-if="selectedAsset.bill_url"
+                type="button"
+                @click.stop="handleViewBill(selectedAsset.bill_url!)"
+                class="inline-flex items-center px-2 py-1 text-xs font-semibold text-indigo-700 bg-indigo-50 rounded-md hover:bg-indigo-100"
               >
-                Pending
-              </span>
+                View Bill
+              </button>
+              <span v-else class="text-slate-500">—</span>
             </dd>
           </div>
         </dl>
@@ -434,7 +549,7 @@ onMounted(async () => {
               @click="startEditInModal"
               class="w-full py-2.5 text-sm font-medium text-indigo-700 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition"
             >
-              Edit description & serial number
+              Edit asset
             </button>
           </template>
         </div>

@@ -82,26 +82,59 @@ router.patch('/:id/acknowledge', requireAdmin, async (req, res) => {
   }
 });
 
-// Admin: update asset (description and/or serial_number)
+// Admin: update asset (any of: name, description, serial_number, company_id, location_id, acknowledged)
 router.patch('/:id', requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
-    const { description, serial_number } = req.body;
+    const { name, description, cost, serial_number, company_id, location_id, acknowledged } = req.body;
     const updates = [];
     const values = [];
     let paramIndex = 1;
-    if (serial_number !== undefined) {
-      updates.push(`serial_number = $${paramIndex}`);
-      values.push(serial_number && serial_number.trim() ? serial_number.trim() : null);
+    if (name !== undefined) {
+      if (typeof name !== 'string' || !name.trim()) {
+        return res.status(400).json({ error: 'name must be a non-empty string' });
+      }
+      updates.push(`name = $${paramIndex}`);
+      values.push(name.trim());
       paramIndex++;
     }
+    if (serial_number !== undefined) {
+      updates.push(`serial_number = $${paramIndex}`);
+      values.push(serial_number !== null && serial_number !== undefined && String(serial_number).trim() ? String(serial_number).trim() : null);
+      paramIndex++;
+    }
+    const detailsMerge = {};
     if (description !== undefined) {
-      updates.push(`details = COALESCE(details, '{}'::jsonb) || jsonb_build_object('description', $${paramIndex}::text)`);
-      values.push(description);
+      detailsMerge.description = description;
+    }
+    if (cost !== undefined) {
+      const costNum = cost === null || cost === '' ? null : parseFloat(cost);
+      if (costNum === null || (!Number.isNaN(costNum) && costNum >= 0)) {
+        detailsMerge.cost = costNum;
+      }
+    }
+    if (Object.keys(detailsMerge).length > 0) {
+      updates.push(`details = COALESCE(details, '{}'::jsonb) || $${paramIndex}::jsonb`);
+      values.push(JSON.stringify(detailsMerge));
+      paramIndex++;
+    }
+    if (company_id !== undefined) {
+      updates.push(`company_id = $${paramIndex}`);
+      values.push(company_id);
+      paramIndex++;
+    }
+    if (location_id !== undefined) {
+      updates.push(`location_id = $${paramIndex}`);
+      values.push(location_id || null);
+      paramIndex++;
+    }
+    if (acknowledged !== undefined) {
+      updates.push(`acknowledged_at = $${paramIndex}`);
+      values.push(acknowledged ? new Date() : null);
       paramIndex++;
     }
     if (updates.length === 0) {
-      return res.status(400).json({ error: 'Provide description and/or serial_number' });
+      return res.status(400).json({ error: 'Provide at least one field to update' });
     }
     values.push(id);
     const result = await pool.query(
@@ -168,6 +201,27 @@ router.get('/count-by-company', requireAdmin, async (req, res) => {
   } catch (err) {
     console.error('Count by company error:', err);
     res.status(500).json({ error: 'Failed to load counts' });
+  }
+});
+
+// Admin: total spend (cost) by company (for spends chart)
+router.get('/spends-by-company', requireAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT c.id, c.name,
+         COALESCE(SUM(
+           CASE WHEN a.details IS NOT NULL AND jsonb_typeof(a.details->'cost') = 'number'
+           THEN (a.details->>'cost')::numeric ELSE 0 END
+         ), 0)::double precision AS total_spend
+       FROM public.companies c
+       LEFT JOIN public.assets a ON a.company_id = c.id
+       GROUP BY c.id, c.name
+       ORDER BY c.name`
+    );
+    res.json(result.rows.map((r) => ({ id: r.id, name: r.name, totalSpend: Number(r.total_spend) })));
+  } catch (err) {
+    console.error('Spends by company error:', err);
+    res.status(500).json({ error: 'Failed to load spends' });
   }
 });
 

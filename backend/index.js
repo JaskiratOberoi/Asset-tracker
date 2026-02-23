@@ -54,11 +54,13 @@ app.post('/api/assets', upload.single('billFile'), async (req, res) => {
     if (!name || !company_id) {
       return res.status(400).json({ error: 'Name and company_id required' });
     }
-    const details = body.description
-      ? { description: body.description }
-      : body.details
-        ? (typeof body.details === 'string' ? JSON.parse(body.details) : body.details)
-        : null;
+    let details = body.details
+      ? (typeof body.details === 'string' ? JSON.parse(body.details) : body.details)
+      : {};
+    if (body.description) details.description = body.description;
+    const costVal = body.cost !== undefined && body.cost !== '' ? parseFloat(body.cost) : null;
+    if (costVal !== null && !Number.isNaN(costVal)) details.cost = costVal;
+    details = Object.keys(details).length ? details : null;
     const serial_number =
       body.serialNumber && body.serialNumber.trim()
         ? body.serialNumber.trim()
