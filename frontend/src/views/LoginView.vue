@@ -86,14 +86,15 @@ onMounted(() => {
           <form @submit.prevent="handleLogin" class="space-y-6">
             <div>
               <label class="block text-sm font-medium text-gray-300 mb-2">
-                Email
+                Email or username
               </label>
               <input
                 v-model="email"
-                type="email"
+                type="text"
                 required
+                autocomplete="username"
                 class="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
-                placeholder="admin@example.com"
+                placeholder="admin or admin@example.com"
                 :disabled="isLoading"
               />
             </div>
