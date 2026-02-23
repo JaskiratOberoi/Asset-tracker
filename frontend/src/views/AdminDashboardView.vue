@@ -20,12 +20,12 @@ const checkAuth = async () => {
   try {
     const me = await getMe()
     if (!me?.user) {
-      router.push('/login')
+      router.push({ path: '/login', query: { reason: 'session_invalid' } })
       return
     }
     user.value = me.user
   } catch {
-    router.push('/login')
+    router.push({ path: '/login', query: { reason: 'session_invalid' } })
     return
   } finally {
     isLoading.value = false

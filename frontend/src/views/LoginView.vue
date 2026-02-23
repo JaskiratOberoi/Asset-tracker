@@ -1,16 +1,27 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, onMounted, watch } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { login } from '../lib/api'
 import { gsap } from 'gsap'
-import { onMounted } from 'vue'
 
 const router = useRouter()
+const route = useRoute()
 const email = ref('')
 const password = ref('')
 const error = ref<string | null>(null)
 const isLoading = ref(false)
 const loginContainer = ref<HTMLElement | null>(null)
+
+// Show message when redirected back from admin (e.g. session could not be verified)
+watch(
+  () => route.query.reason,
+  (reason) => {
+    if (reason === 'session_invalid') {
+      error.value = 'Your session could not be verified. Please sign in again.'
+    }
+  },
+  { immediate: true }
+)
 
 const handleLogin = async () => {
   error.value = null
@@ -19,8 +30,10 @@ const handleLogin = async () => {
   try {
     await login(email.value, password.value)
     router.push('/admin')
-  } catch (err: any) {
-    error.value = err.message || 'Login failed. Please check your credentials.'
+  } catch (err: unknown) {
+    const message = (err instanceof Error ? err.message : null) || 'Login failed. Please check your credentials.'
+    error.value = message
+    console.error('Login error:', err)
   } finally {
     isLoading.value = false
   }
@@ -65,8 +78,8 @@ onMounted(() => {
           </div>
 
           <!-- Error Message -->
-          <div v-if="error" class="mb-6 p-4 bg-red-500/20 border border-red-500/50 rounded-lg">
-            <p class="text-red-200 text-sm">{{ error }}</p>
+          <div v-if="error" role="alert" class="mb-6 p-4 bg-red-500/20 border border-red-500/50 rounded-lg">
+            <p class="text-red-200 text-sm font-medium">{{ error }}</p>
           </div>
 
           <!-- Login Form -->

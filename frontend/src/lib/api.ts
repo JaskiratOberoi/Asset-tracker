@@ -13,13 +13,34 @@ function getHeaders(includeAuth = false): HeadersInit {
   return headers
 }
 
+const LOGIN_TIMEOUT_MS = 15000
+
 export async function login(email: string, password: string) {
-  const res = await fetch(`${BASE_URL}/api/auth/login`, {
-    method: 'POST',
-    headers: getHeaders(),
-    body: JSON.stringify({ email, password })
-  })
-  const data = await res.json().catch(() => ({}))
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), LOGIN_TIMEOUT_MS)
+  let res: Response
+  try {
+    res = await fetch(`${BASE_URL}/api/auth/login`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ email, password }),
+      signal: controller.signal
+    })
+  } catch (e) {
+    clearTimeout(timeoutId)
+    if ((e as Error).name === 'AbortError') {
+      throw new Error('Request timed out. The server may be slow or unreachable.')
+    }
+    throw new Error('Cannot reach the server. Check your connection and that the API is running.')
+  }
+  clearTimeout(timeoutId)
+  const text = await res.text()
+  let data: { error?: string; token?: string; user?: unknown } = {}
+  try {
+    data = text ? JSON.parse(text) : {}
+  } catch {
+    throw new Error('Server returned an invalid response. The API may be down or the URL may be wrong.')
+  }
   if (!res.ok) throw new Error(data.error || 'Login failed')
   if (data.token) {
     localStorage.setItem('token', data.token)
