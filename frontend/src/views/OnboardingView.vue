@@ -216,7 +216,7 @@ const submitForm = async () => {
     fd.append('name', validatedData.name)
     fd.append('companyId', validatedData.companyId)
     if (validatedData.description) fd.append('description', validatedData.description)
-    if (validatedData.cost != null && validatedData.cost !== '' && !Number.isNaN(Number(validatedData.cost))) {
+    if (validatedData.cost != null && !Number.isNaN(Number(validatedData.cost))) {
       fd.append('cost', String(validatedData.cost))
     }
     if (validatedData.serialNumber?.trim()) fd.append('serialNumber', validatedData.serialNumber.trim())
