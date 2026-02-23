@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { getAssets, getFileViewUrl, acknowledgeAsset, deleteAsset } from '../lib/api'
 import { gsap } from 'gsap'
 
@@ -24,6 +24,10 @@ const tableContainer = ref<HTMLElement | null>(null)
 const deleteTarget = ref<Asset | null>(null)
 const isDeleting = ref(false)
 const isAcknowledging = ref<string | null>(null)
+const isAcknowledgingAll = ref(false)
+
+const pendingAssets = computed(() => assets.value.filter((a) => !a.acknowledged_at))
+const hasPending = computed(() => pendingAssets.value.length > 0)
 
 const handleViewBill = async (fileId: string) => {
   try {
@@ -66,6 +70,24 @@ const handleAcknowledge = async (asset: Asset) => {
     error.value = (err instanceof Error ? err.message : null) || 'Failed to acknowledge'
   } finally {
     isAcknowledging.value = null
+  }
+}
+
+const handleAcknowledgeAll = async () => {
+  if (!hasPending.value) return
+  try {
+    isAcknowledgingAll.value = true
+    error.value = null
+    const now = new Date().toISOString()
+    for (const asset of pendingAssets.value) {
+      await acknowledgeAsset(asset.id)
+      const a = assets.value.find((x) => x.id === asset.id)
+      if (a) a.acknowledged_at = now
+    }
+  } catch (err: unknown) {
+    error.value = (err instanceof Error ? err.message : null) || 'Failed to acknowledge all'
+  } finally {
+    isAcknowledgingAll.value = false
   }
 }
 
@@ -118,7 +140,18 @@ onMounted(async () => {
       </div>
     </div>
 
-    <div v-else class="overflow-x-auto custom-scrollbar">
+    <div v-else>
+      <div class="flex justify-end mb-4">
+        <button
+          v-if="hasPending"
+          @click="handleAcknowledgeAll"
+          :disabled="isAcknowledgingAll"
+          class="inline-flex items-center px-4 py-2 text-sm font-semibold text-green-700 bg-green-50 rounded-lg hover:bg-green-100 disabled:opacity-50"
+        >
+          {{ isAcknowledgingAll ? 'Acknowledging…' : `Acknowledge all (${pendingAssets.length})` }}
+        </button>
+      </div>
+      <div class="overflow-x-auto custom-scrollbar">
       <table class="min-w-full divide-y divide-slate-200">
         <thead>
           <tr class="bg-slate-50/80">
@@ -265,6 +298,7 @@ onMounted(async () => {
           </tr>
         </tbody>
       </table>
+      </div>
     </div>
 
     <!-- Delete confirmation modal -->

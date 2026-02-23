@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { login } from '../lib/api'
 import { gsap } from 'gsap'
@@ -11,6 +11,26 @@ const password = ref('')
 const error = ref<string | null>(null)
 const isLoading = ref(false)
 const loginContainer = ref<HTMLElement | null>(null)
+const bgLayer = ref<HTMLElement | null>(null)
+
+// Mouse position for interactive background (normalized -1 to 1)
+const mouse = ref({ x: 0, y: 0 })
+const targetMouse = ref({ x: 0, y: 0 })
+
+const onMouseMove = (e: MouseEvent) => {
+  const w = window.innerWidth
+  const h = window.innerHeight
+  targetMouse.value.x = (e.clientX / w) * 2 - 1
+  targetMouse.value.y = (e.clientY / h) * 2 - 1
+}
+
+let rafId = 0
+const lerp = (a: number, b: number, t: number) => a + (b - a) * t
+const animateMouse = () => {
+  mouse.value.x = lerp(mouse.value.x, targetMouse.value.x, 0.08)
+  mouse.value.y = lerp(mouse.value.y, targetMouse.value.y, 0.08)
+  rafId = requestAnimationFrame(animateMouse)
+}
 
 // Show message when redirected back from admin (e.g. session could not be verified)
 watch(
@@ -48,13 +68,33 @@ onMounted(() => {
       ease: 'power2.out'
     })
   }
+  // Floating animation for background orbs
+  const blobEls = bgLayer.value?.querySelectorAll('[data-blob]')
+  blobEls?.forEach((el, i) => {
+    const sign = i % 2 === 0 ? 1 : -1
+    gsap.to(el, {
+      x: `+=${80 * sign}`,
+      y: `+=${40 * sign}`,
+      duration: 8 + i * 2,
+      repeat: -1,
+      yoyo: true,
+      ease: 'sine.inOut'
+    })
+  })
+  rafId = requestAnimationFrame(animateMouse)
+  window.addEventListener('mousemove', onMouseMove)
+})
+
+onUnmounted(() => {
+  cancelAnimationFrame(rafId)
+  window.removeEventListener('mousemove', onMouseMove)
 })
 </script>
 
 <template>
   <div class="min-h-screen bg-slate-50">
     <!-- Header - matches AdminDashboardView -->
-    <header class="bg-white border-b border-slate-200 shadow-sm">
+    <header class="relative z-20 bg-white border-b border-slate-200 shadow-sm">
       <div class="max-w-7xl mx-auto px-8 py-6">
         <h1 class="text-2xl font-semibold text-slate-900">Asset Tracker</h1>
         <p class="text-sm text-slate-500 mt-1">Admin console</p>
@@ -62,8 +102,64 @@ onMounted(() => {
     </header>
 
     <!-- Main Content -->
-    <main class="max-w-7xl mx-auto px-8 py-12 flex items-center justify-center min-h-[calc(100vh-88px)]">
-      <div ref="loginContainer" class="w-full max-w-md">
+    <main class="relative min-h-[calc(100vh-88px)] flex items-center justify-center overflow-hidden">
+      <!-- Interactive background -->
+      <div ref="bgLayer" class="absolute inset-0 pointer-events-none">
+        <div class="absolute inset-0 bg-gradient-to-br from-slate-50 via-indigo-50/40 to-slate-100" />
+        <!-- Subtle grid -->
+        <div
+          class="absolute inset-0 opacity-[0.4]"
+          style="background-image: linear-gradient(rgba(148,163,184,0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,0.15) 1px, transparent 1px); background-size: 48px 48px;"
+        />
+        <!-- Floating orbs with mouse parallax -->
+        <div
+          class="absolute top-1/4 left-1/4 w-[320px] h-[320px] rounded-full"
+          :style="{ transform: `translate(${mouse.x * 24}px, ${mouse.y * 24}px)` }"
+        >
+          <div
+            data-blob
+            class="absolute inset-0 rounded-full bg-indigo-300/50 blur-3xl"
+          />
+        </div>
+        <div
+          class="absolute top-1/2 right-1/5 w-[280px] h-[280px] rounded-full"
+          :style="{ transform: `translate(${mouse.x * -20}px, ${mouse.y * 20}px)` }"
+        >
+          <div
+            data-blob
+            class="absolute inset-0 rounded-full bg-violet-300/40 blur-3xl"
+          />
+        </div>
+        <div
+          class="absolute bottom-1/4 left-1/3 w-[240px] h-[240px] rounded-full"
+          :style="{ transform: `translate(${mouse.x * 16}px, ${mouse.y * -16}px)` }"
+        >
+          <div
+            data-blob
+            class="absolute inset-0 rounded-full bg-slate-300/35 blur-3xl"
+          />
+        </div>
+        <div
+          class="absolute top-1/3 right-1/3 w-[200px] h-[200px] rounded-full"
+          :style="{ transform: `translate(${mouse.x * -12}px, ${mouse.y * -12}px)` }"
+        >
+          <div
+            data-blob
+            class="absolute inset-0 rounded-full bg-indigo-200/30 blur-2xl"
+          />
+        </div>
+        <div
+          class="absolute bottom-1/3 right-1/2 w-[180px] h-[180px] rounded-full"
+          :style="{ transform: `translate(${mouse.x * 10}px, ${mouse.y * 10}px)` }"
+        >
+          <div
+            data-blob
+            class="absolute inset-0 rounded-full bg-violet-200/25 blur-2xl"
+          />
+        </div>
+      </div>
+
+      <div ref="loginContainer" class="relative z-10 w-full max-w-md mx-auto px-8 py-12">
         <!-- Card - same style as admin dashboard bento cards -->
         <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-8">
           <div class="mb-8">

@@ -171,14 +171,14 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div ref="chartContainer" class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+  <div ref="chartContainer" class="grid grid-cols-1 lg:grid-cols-2 gap-5">
     <!-- Bar Chart -->
-    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-8">
-      <div class="mb-6">
-        <h3 class="text-lg font-semibold text-slate-900 mb-1">Assets Distribution</h3>
-        <p class="text-sm text-slate-500">Visual breakdown by company</p>
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+      <div class="mb-3">
+        <h3 class="text-base font-semibold text-slate-900 mb-0.5">Assets Distribution</h3>
+        <p class="text-xs text-slate-500">Visual breakdown by company</p>
       </div>
-      <div v-if="isLoading" class="h-80 flex items-center justify-center">
+      <div v-if="isLoading" class="h-52 flex items-center justify-center">
         <div class="text-center">
           <svg class="animate-spin h-8 w-8 text-slate-400 mx-auto mb-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -187,7 +187,7 @@ onMounted(async () => {
           <p class="text-sm text-slate-500">Loading chart data...</p>
         </div>
       </div>
-      <div v-else-if="companies.length === 0" class="h-80 flex items-center justify-center">
+      <div v-else-if="companies.length === 0" class="h-52 flex items-center justify-center">
         <div class="text-center">
           <svg class="w-12 h-12 text-slate-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
@@ -195,18 +195,18 @@ onMounted(async () => {
           <p class="text-sm text-slate-500">No data available</p>
         </div>
       </div>
-      <div v-else class="h-80">
+      <div v-else class="h-52">
         <Bar :data="barChartData" :options="(chartOptions as any)" />
       </div>
     </div>
 
     <!-- Doughnut Chart -->
-    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-8">
-      <div class="mb-6">
-        <h3 class="text-lg font-semibold text-slate-900 mb-1">Assets by Company</h3>
-        <p class="text-sm text-slate-500">Percentage breakdown</p>
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+      <div class="mb-3">
+        <h3 class="text-base font-semibold text-slate-900 mb-0.5">Assets by Company</h3>
+        <p class="text-xs text-slate-500">Percentage breakdown</p>
       </div>
-      <div v-if="isLoading" class="h-80 flex items-center justify-center">
+      <div v-if="isLoading" class="h-52 flex items-center justify-center">
         <div class="text-center">
           <svg class="animate-spin h-8 w-8 text-slate-400 mx-auto mb-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -215,7 +215,7 @@ onMounted(async () => {
           <p class="text-sm text-slate-500">Loading chart data...</p>
         </div>
       </div>
-      <div v-else-if="companies.length === 0" class="h-80 flex items-center justify-center">
+      <div v-else-if="companies.length === 0" class="h-52 flex items-center justify-center">
         <div class="text-center">
           <svg class="w-12 h-12 text-slate-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
@@ -224,7 +224,7 @@ onMounted(async () => {
           <p class="text-sm text-slate-500">No data available</p>
         </div>
       </div>
-      <div v-else class="h-80">
+      <div v-else class="h-52">
         <Doughnut :data="doughnutChartData" :options="(chartOptions as any)" />
       </div>
     </div>

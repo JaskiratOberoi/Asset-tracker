@@ -76,7 +76,7 @@ onMounted(async () => {
 
       <!-- Main Content - Bento Box Layout -->
       <main class="max-w-7xl mx-auto px-8 py-8">
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
           <div class="lg:col-span-8 bento-card">
             <ExpenseCharts />
           </div>
