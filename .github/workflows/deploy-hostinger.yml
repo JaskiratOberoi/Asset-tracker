@@ -10,7 +10,8 @@ on:
 
 env:
   FTP_SERVER: 46.28.45.60
-  FTP_SERVER_DIR: public_html/assets
+  # Hostinger FTP root is usually public_html — use "assets" so files land in public_html/assets (not public_html/public_html/assets)
+  FTP_SERVER_DIR: assets
 
 jobs:
   deploy:
