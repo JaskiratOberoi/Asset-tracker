@@ -53,16 +53,25 @@ export async function getMe() {
   return res.json()
 }
 
+async function parseJsonOrThrow(res: Response, context: string): Promise<unknown> {
+  const text = await res.text()
+  try {
+    return text ? JSON.parse(text) : []
+  } catch {
+    throw new Error(`${context}: API returned invalid response (not JSON). Check that the API URL is correct and the server is running.`)
+  }
+}
+
 export async function getCompanies() {
   const res = await fetch(`${BASE_URL}/api/companies`, { headers: getHeaders() })
   if (!res.ok) throw new Error('Failed to load companies')
-  return res.json()
+  return parseJsonOrThrow(res, 'Companies') as Promise<Array<{ id: string; name: string }>>
 }
 
 export async function getLocations() {
   const res = await fetch(`${BASE_URL}/api/locations`, { headers: getHeaders() })
   if (!res.ok) throw new Error('Failed to load locations')
-  return res.json()
+  return parseJsonOrThrow(res, 'Locations') as Promise<Array<{ id: string; name: string; company_id: string }>>
 }
 
 export async function createAsset(formData: FormData) {

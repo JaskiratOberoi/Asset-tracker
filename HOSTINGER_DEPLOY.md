@@ -67,6 +67,25 @@ env:
 
 ---
 
+## 7. Troubleshooting: "Deploy succeeded but I see Hostinger default page"
+
+If the workflow succeeds but you see Hostinger’s default “You Are All Set to Go!” at `assets.stellarinfomatica.com`:
+
+1. **Try the `/assets/` path**  
+   Open **https://assets.stellarinfomatica.com/assets/** (with trailing slash).  
+   - If the Vue app loads there, the subdomain is serving from the main `public_html` root and your app is in `public_html/assets`.  
+   - **Fix:** In hPanel go to **Domains** → your domain → **Subdomains**. Edit the **assets** subdomain and set its **Document root** to the folder that contains the app (e.g. `public_html/assets` or `assets`). Save and test **https://assets.stellarinfomatica.com** again.
+
+2. **Check where files landed**  
+   In hPanel open **Files** → **File Manager** and look for `index.html` and the `assets` folder (JS/CSS).  
+   - If they are under `public_html/assets`, the workflow path is correct; point the subdomain document root to that folder (step 1).  
+   - If your FTP user’s root is already `public_html`, set in the workflow: `FTP_SERVER_DIR: assets` (not `public_html/assets`), then re-run the deploy.
+
+3. **If you cannot change subdomain document root**  
+   Use the app at **https://assets.stellarinfomatica.com/assets/** and point your links/DNS there, or add an `.htaccess` redirect on the subdomain so the root redirects to `/assets/`.
+
+---
+
 ## Quick reference: secrets checklist
 
 | Secret           | Added? |
