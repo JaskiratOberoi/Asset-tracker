@@ -4,38 +4,17 @@
 
 ### Prerequisites
 
-1. **SSH Access**: Ensure you have SSH access to your Hostinger account
+1. **FTP Access**: Hostinger uses FTP (not SSH) for file deployment. Ensure you have FTP credentials from hPanel.
 2. **Build Tools**: Node.js and npm installed locally
-3. **Deployment Tool**: Choose one:
-   - `rsync` (recommended for Linux/Mac/WSL)
-   - `scp` (available on most systems)
-   - Manual upload via Hostinger File Manager
+3. **Deployment**: Use the GitHub Actions workflow (FTP), or manual upload via Hostinger File Manager
 
 ### Quick Deployment
 
-#### Option 1: Using Bash Script (Linux/Mac/WSL)
+#### Option 1: Automated (GitHub Actions + FTP)
 
-```bash
-# Set environment variables
-export DEPLOY_USER="your-hostinger-username"
-export DEPLOY_PATH="/domains/stellarinfomatica.com/public_html/assets"
+Push to `main` with the three secrets set (see below). The workflow builds and deploys via FTP.
 
-# Run deployment
-chmod +x deploy.sh
-./deploy.sh
-```
-
-#### Option 2: Using PowerShell Script (Windows)
-
-```powershell
-# Run the deployment script
-.\deploy.ps1
-
-# Or with parameters
-.\deploy.ps1 -DeployUser "your-username" -DeployPath "/domains/stellarinfomatica.com/public_html/assets"
-```
-
-#### Option 3: Manual Deployment
+#### Option 2: Manual Deployment
 
 1. **Build the frontend:**
    ```bash
@@ -51,32 +30,10 @@ chmod +x deploy.sh
 
 ### Configuration
 
-#### Finding Your Hostinger Path
+#### Finding Your Hostinger FTP Details
 
-The typical Hostinger path structure is:
-```
-/domains/[your-domain]/public_html/[subdomain-or-folder]
-```
-
-For `assets.stellarinfomatica.com`, it might be:
-- `/domains/stellarinfomatica.com/public_html/assets`
-- Or a subdomain configuration path
-
-#### Setting Up SSH Keys (Recommended)
-
-1. Generate SSH key (if you don't have one):
-   ```bash
-   ssh-keygen -t rsa -b 4096 -C "your-email@example.com"
-   ```
-
-2. Add public key to Hostinger:
-   - Copy `~/.ssh/id_rsa.pub`
-   - Add it in Hostinger's SSH Keys section
-
-3. Test connection:
-   ```bash
-   ssh your-username@assets.stellarinfomatica.com
-   ```
+- **FTP server:** In hPanel → **Files** → **FTP Accounts** (e.g. `ftp.stellarinfomatica.com` or the host shown there).
+- **Remote path:** From your FTP root, the web root is usually `public_html`. For the assets subdomain use e.g. `public_html/assets`.
 
 ### Deployment Steps
 
@@ -107,10 +64,10 @@ For `assets.stellarinfomatica.com`, it might be:
 - Verify Node.js version compatibility
 
 #### Upload Fails
-- Verify SSH credentials
-- Check remote path is correct
-- Ensure you have write permissions on remote directory
-- Try manual upload via File Manager as fallback
+- Verify FTP username and password in GitHub Secrets
+- Check `FTP_SERVER` and `FTP_SERVER_DIR` in the workflow (Hostinger FTP path is often `public_html/assets`)
+- Try logging in with an FTP client to confirm credentials and path
+- Use manual upload via File Manager as fallback
 
 #### Site Not Loading
 - Check file permissions on remote server (should be 644 for files, 755 for directories)
@@ -133,21 +90,18 @@ For `assets.stellarinfomatica.com`, it might be:
 For production, update `.env` or set environment variables:
 
 ```env
-VITE_SUPABASE_URL=https://your-supabase-url.com
-VITE_SUPABASE_ANON_KEY=your-production-anon-key
+VITE_API_URL=https://api.yourdomain.com
 ```
 
 **Important**: Rebuild after changing environment variables!
 
-### Automated Deployment (GitHub Actions)
+### Automated Deployment (GitHub Actions + FTP)
 
 A workflow at `.github/workflows/deploy-hostinger.yml` deploys automatically on push to `main` (or manually via "Run workflow"):
 
-1. **Builds** the app with `npm run build` in `frontend/`, injecting:
-   - `VITE_SUPABASE_URL`
-   - `VITE_SUPABASE_ANON_KEY`
+1. **Builds** the app with `npm run build` in `frontend/`, injecting **`VITE_API_URL`** (production API URL).
 2. **Adds** an `.htaccess` in `dist/` so all requests fall back to `index.html` (fixes Vue Router 404s).
-3. **Deploys** the `frontend/dist/` folder to the assets subdomain via SSH (rsync).
+3. **Deploys** the `frontend/dist/` folder to the assets subdomain via **FTP** (Hostinger uses FTP, not SSH).
 
 #### Required GitHub secrets
 
@@ -155,16 +109,13 @@ In the repo: **Settings → Secrets and variables → Actions**, add:
 
 | Secret | Description |
 |--------|-------------|
-| `VITE_SUPABASE_URL` | Production Supabase project URL (e.g. `https://xxx.supabase.co`) |
-| `VITE_SUPABASE_ANON_KEY` | Production Supabase anonymous key |
-| `DEPLOY_SSH_KEY` | Private SSH key used to connect to Hostinger (full key, including `-----BEGIN ... -----`) |
-| `DEPLOY_SSH_USER` | Hostinger SSH username |
+| `VITE_API_URL` | Production backend API URL (e.g. `https://api.yourdomain.com`) |
+| `FTP_USERNAME` | Hostinger FTP username (from hPanel → FTP Accounts) |
+| `FTP_PASSWORD` | Hostinger FTP password for that user |
 
 #### Host and path
 
-Default in the workflow:
+Edit the `env` block at the top of `.github/workflows/deploy-hostinger.yml` if needed:
 
-- **Host:** `assets.stellarinfomatica.com`
-- **Path:** `/domains/stellarinfomatica.com/public_html/assets`
-
-To change them, edit the `env` block at the top of `.github/workflows/deploy-hostinger.yml`.
+- **`FTP_SERVER`** – FTP hostname (default: `ftp.stellarinfomatica.com`). Use the host shown in Hostinger FTP Accounts.
+- **`FTP_SERVER_DIR`** – Remote directory (default: `public_html/assets`). Path from FTP root to your app folder.

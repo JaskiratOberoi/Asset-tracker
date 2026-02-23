@@ -1,49 +1,40 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { supabase } from '../lib/supabase'
+import { logout, getMe } from '../lib/api'
 import { gsap } from 'gsap'
 import AssetsTable from '../components/AssetsTable.vue'
 import ExpenseCharts from '../components/ExpenseCharts.vue'
 
 const router = useRouter()
 const isLoading = ref(true)
-const user = ref<any>(null)
+const user = ref<{ id: string; email: string } | null>(null)
 const dashboardContainer = ref<HTMLElement | null>(null)
 
-const handleLogout = async () => {
-  await supabase.auth.signOut()
+const handleLogout = () => {
+  logout()
   router.push('/login')
 }
 
 const checkAuth = async () => {
-  const { data: { session } } = await supabase.auth.getSession()
-  
-  if (!session) {
+  try {
+    const me = await getMe()
+    if (!me?.user) {
+      router.push('/login')
+      return
+    }
+    user.value = me.user
+  } catch {
     router.push('/login')
     return
+  } finally {
+    isLoading.value = false
   }
-
-  // Verify admin status
-  const { data: adminCheck, error } = await supabase
-    .from('admin_users')
-    .select('user_id')
-    .eq('user_id', session.user.id)
-    .single()
-
-  if (error || !adminCheck) {
-    await supabase.auth.signOut()
-    router.push('/login')
-    return
-  }
-
-  user.value = session.user
-  isLoading.value = false
 }
 
 onMounted(async () => {
   await checkAuth()
-  
+
   if (dashboardContainer.value) {
     const cards = dashboardContainer.value.querySelectorAll('.bento-card')
     gsap.from(cards, {
@@ -85,14 +76,10 @@ onMounted(async () => {
 
       <!-- Main Content - Bento Box Layout -->
       <main class="max-w-7xl mx-auto px-8 py-8">
-        <!-- Bento Grid -->
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          <!-- Charts Section - Spans 12 columns on mobile, 8 on desktop -->
           <div class="lg:col-span-8 bento-card">
             <ExpenseCharts />
           </div>
-
-          <!-- Quick Stats Card - Spans 12 columns on mobile, 4 on desktop -->
           <div class="lg:col-span-4 bento-card">
             <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-8 h-full">
               <h3 class="text-lg font-semibold text-slate-900 mb-6">Quick Stats</h3>
@@ -122,8 +109,6 @@ onMounted(async () => {
               </div>
             </div>
           </div>
-
-          <!-- Assets Table - Spans full width -->
           <div class="lg:col-span-12 bento-card">
             <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-8">
               <div class="mb-6">

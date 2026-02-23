@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { supabase } from '../lib/supabase'
+import { login } from '../lib/api'
 import { gsap } from 'gsap'
 import { onMounted } from 'vue'
 
@@ -17,25 +17,7 @@ const handleLogin = async () => {
   isLoading.value = true
 
   try {
-    const { data, error: authError } = await supabase.auth.signInWithPassword({
-      email: email.value,
-      password: password.value
-    })
-
-    if (authError) throw authError
-
-    // Check if user is admin
-    const { data: adminCheck, error: adminError } = await supabase
-      .from('admin_users')
-      .select('user_id')
-      .eq('user_id', data.user?.id)
-      .single()
-
-    if (adminError || !adminCheck) {
-      await supabase.auth.signOut()
-      throw new Error('Access denied. Admin privileges required.')
-    }
-
+    await login(email.value, password.value)
     router.push('/admin')
   } catch (err: any) {
     error.value = err.message || 'Login failed. Please check your credentials.'

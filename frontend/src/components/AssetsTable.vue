@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { supabase } from '../lib/supabase'
+import { getAssets, getFileViewUrl } from '../lib/api'
 import { gsap } from 'gsap'
 
 interface Asset {
@@ -21,34 +21,19 @@ const isLoading = ref(true)
 const error = ref<string | null>(null)
 const tableContainer = ref<HTMLElement | null>(null)
 
-const getBillUrl = async (billPath: string) => {
-  const { data } = await supabase.storage
-    .from('bills')
-    .createSignedUrl(billPath, 3600)
-  
-  return data?.signedUrl || null
-}
-
-const handleViewBill = async (billPath: string) => {
-  const url = await getBillUrl(billPath)
-  if (url) {
+const handleViewBill = async (fileId: string) => {
+  try {
+    const url = await getFileViewUrl(fileId)
     window.open(url, '_blank')
+  } catch (err: any) {
+    console.error('Failed to load file:', err)
   }
 }
 
 const loadAssets = async () => {
   try {
     isLoading.value = true
-    const { data, error: fetchError } = await supabase
-      .from('assets')
-      .select(`
-        *,
-        companies:company_id (name),
-        locations:location_id (name)
-      `)
-      .order('created_at', { ascending: false })
-
-    if (fetchError) throw fetchError
+    const data = await getAssets()
     assets.value = data || []
   } catch (err: any) {
     error.value = err.message || 'Failed to load assets'
@@ -59,7 +44,7 @@ const loadAssets = async () => {
 
 onMounted(async () => {
   await loadAssets()
-  
+
   if (tableContainer.value) {
     gsap.from(tableContainer.value.querySelectorAll('tr'), {
       opacity: 0,
@@ -83,7 +68,7 @@ onMounted(async () => {
         <span class="font-medium">Loading assets...</span>
       </div>
     </div>
-    
+
     <div v-else-if="error" class="text-center py-12">
       <div class="inline-flex items-center space-x-2 text-red-600">
         <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
@@ -118,9 +103,9 @@ onMounted(async () => {
           </tr>
         </thead>
         <tbody class="bg-white divide-y divide-slate-100">
-          <tr 
-            v-for="asset in assets" 
-            :key="asset.id" 
+          <tr
+            v-for="asset in assets"
+            :key="asset.id"
             class="group hover:bg-gradient-to-r hover:from-indigo-50/50 hover:to-purple-50/50 transition-all duration-200 cursor-pointer border-l-4 border-transparent hover:border-indigo-400"
           >
             <td class="px-6 py-5">
@@ -169,7 +154,6 @@ onMounted(async () => {
           <tr v-if="assets.length === 0">
             <td colspan="6" class="px-8 py-16">
               <div class="flex flex-col items-center justify-center">
-                <!-- Elegant SVG Illustration -->
                 <svg class="w-32 h-32 text-slate-300 mb-6" fill="none" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
                   <defs>
                     <linearGradient id="emptyGradient" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -177,22 +161,18 @@ onMounted(async () => {
                       <stop offset="100%" style="stop-color:#94a3b8;stop-opacity:0.6" />
                     </linearGradient>
                   </defs>
-                  <!-- Box/Asset Icon -->
                   <rect x="60" y="50" width="80" height="80" rx="8" fill="url(#emptyGradient)" stroke="#cbd5e1" stroke-width="2"/>
                   <rect x="70" y="60" width="60" height="50" rx="4" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1.5"/>
                   <line x1="75" y1="75" x2="125" y2="75" stroke="#cbd5e1" stroke-width="1.5" stroke-linecap="round"/>
                   <line x1="75" y1="90" x2="110" y2="90" stroke="#cbd5e1" stroke-width="1.5" stroke-linecap="round"/>
-                  <!-- Plus Icon -->
                   <circle cx="100" cy="150" r="20" fill="#e2e8f0" stroke="#cbd5e1" stroke-width="2"/>
                   <line x1="100" y1="140" x2="100" y2="160" stroke="#94a3b8" stroke-width="2.5" stroke-linecap="round"/>
                   <line x1="90" y1="150" x2="110" y2="150" stroke="#94a3b8" stroke-width="2.5" stroke-linecap="round"/>
                 </svg>
-                <!-- Empty State Text -->
                 <h3 class="text-lg font-semibold text-slate-900 mb-2">No assets found</h3>
                 <p class="text-sm text-slate-500 mb-8 max-w-sm text-center">
                   Get started by adding your first asset to the system.
                 </p>
-                <!-- Add Asset CTA -->
                 <a
                   href="/onboarding"
                   class="inline-flex items-center px-6 py-3 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors shadow-sm hover:shadow-md"

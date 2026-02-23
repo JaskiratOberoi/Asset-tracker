@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, nextTick } from 'vue'
 import { z } from 'zod'
-import { supabase } from '../lib/supabase'
+import { getCompanies, getLocations, createAsset } from '../lib/api'
 import { gsap } from 'gsap'
 
 // Form validation schema
@@ -205,58 +205,18 @@ const submitForm = async () => {
     }
     
     const validatedData = assetSchema.parse(dataToValidate)
-    
-    // Upload bill file if provided (optional)
-    let billUrl: string | undefined = undefined
-    
+
+    const fd = new FormData()
+    fd.append('name', validatedData.name)
+    fd.append('companyId', validatedData.companyId)
+    if (validatedData.description) fd.append('description', validatedData.description)
+    if (validatedData.serialNumber?.trim()) fd.append('serialNumber', validatedData.serialNumber.trim())
+    if (validatedData.locationId) fd.append('locationId', validatedData.locationId)
     if (validatedData.billFile && validatedData.billFile instanceof File) {
-      try {
-        const fileExt = validatedData.billFile.name.split('.').pop()
-        const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`
-        const filePath = `bills/${validatedData.companyId}/${fileName}`
-        
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('bills')
-          .upload(filePath, validatedData.billFile, {
-            cacheControl: '3600',
-            upsert: false
-          }, (progress) => {
-            if (progress.total) {
-              uploadProgress.value = Math.round((progress.loaded / progress.total) * 100)
-            }
-          })
-        
-        if (uploadError) {
-          console.error('Upload error:', uploadError)
-          throw new Error(`File upload failed: ${uploadError.message}`)
-        }
-        
-        billUrl = filePath
-      } catch (uploadErr: any) {
-        console.error('File upload error:', uploadErr)
-        throw new Error(`Failed to upload bill: ${uploadErr.message || 'Unknown error'}`)
-      }
+      fd.append('billFile', validatedData.billFile)
     }
-    
-    // Insert asset into database
-    const { data, error } = await supabase
-      .from('assets')
-      .insert({
-        name: validatedData.name,
-        details: validatedData.description ? { description: validatedData.description } : null,
-        serial_number: validatedData.serialNumber && validatedData.serialNumber.trim() ? validatedData.serialNumber.trim() : null,
-        company_id: validatedData.companyId,
-        location_id: validatedData.locationId || null,
-        bill_url: billUrl || null
-      })
-      .select()
-      .single()
-    
-    if (error) {
-      console.error('Database error:', error)
-      throw new Error(`Failed to save asset: ${error.message || 'Database error'}`)
-    }
-    
+
+    await createAsset(fd)
     submitSuccess.value = true
     
     // Reset form after 3 seconds
@@ -302,18 +262,7 @@ const loadCompanies = async () => {
   isLoadingCompanies.value = true
   companiesError.value = null
   try {
-    console.log('Loading companies from:', import.meta.env.VITE_SUPABASE_URL || 'http://localhost:8000')
-    const { data, error } = await supabase
-      .from('companies')
-      .select('id, name')
-      .order('name')
-    
-    if (error) {
-      console.error('Supabase error loading companies:', error)
-      throw error
-    }
-    
-    console.log('Companies loaded:', data)
+    const data = await getCompanies()
     companies.value = data || []
     
     if (companies.value.length === 0) {
@@ -329,12 +278,7 @@ const loadCompanies = async () => {
 
 const loadLocations = async () => {
   try {
-    const { data, error } = await supabase
-      .from('locations')
-      .select('id, name, company_id')
-      .order('name')
-    
-    if (error) throw error
+    const data = await getLocations()
     locations.value = data || []
   } catch (error) {
     console.error('Error loading locations:', error)

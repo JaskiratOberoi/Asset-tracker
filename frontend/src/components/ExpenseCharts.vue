@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-import { supabase } from '../lib/supabase'
+import { getAssetCountByCompany } from '../lib/api'
 import { Bar, Doughnut } from 'vue-chartjs'
 import {
   Chart as ChartJS,
@@ -146,34 +146,8 @@ const chartOptions = {
 const loadCompanyData = async () => {
   try {
     isLoading.value = true
-    
-    // Get all companies
-    const { data: companiesData, error: companiesError } = await supabase
-      .from('companies')
-      .select('id, name')
-      .order('name')
-
-    if (companiesError) throw companiesError
-
-    // Get asset counts per company
-    const companyStats = await Promise.all(
-      (companiesData || []).map(async (company) => {
-        const { count, error } = await supabase
-          .from('assets')
-          .select('*', { count: 'exact', head: true })
-          .eq('company_id', company.id)
-
-        if (error) throw error
-
-        return {
-          id: company.id,
-          name: company.name,
-          assetCount: count || 0
-        }
-      })
-    )
-
-    companies.value = companyStats
+    const data = await getAssetCountByCompany()
+    companies.value = data || []
   } catch (error) {
     console.error('Error loading company data:', error)
   } finally {

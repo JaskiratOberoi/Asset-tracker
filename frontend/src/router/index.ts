@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { supabase } from '../lib/supabase'
+import { getSession, getMe } from '../lib/api'
 import OnboardingView from '../views/OnboardingView.vue'
 import LoginView from '../views/LoginView.vue'
 import AdminDashboardView from '../views/AdminDashboardView.vue'
@@ -31,23 +31,18 @@ const router = createRouter({
   ]
 })
 
-// Navigation guard for protected routes
 router.beforeEach(async (to, from, next) => {
-  const { data: { session } } = await supabase.auth.getSession()
+  const session = getSession()
+  const hasToken = !!session
 
-  if (to.meta.requiresAuth && !session) {
+  if (to.meta.requiresAuth && !hasToken) {
     next('/login')
-  } else if (to.meta.requiresGuest && session) {
-    // Check if user is admin
-    const { data: adminCheck } = await supabase
-      .from('admin_users')
-      .select('user_id')
-      .eq('user_id', session.user.id)
-      .single()
-
-    if (adminCheck) {
-      next('/admin')
-    } else {
+  } else if (to.meta.requiresGuest && hasToken) {
+    try {
+      const me = await getMe()
+      if (me?.user) next('/admin')
+      else next()
+    } catch {
       next()
     }
   } else {
