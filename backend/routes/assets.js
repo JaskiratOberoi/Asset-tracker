@@ -1,6 +1,7 @@
 const express = require('express');
 const { pool } = require('../db');
 const { requireAdmin } = require('../middleware/auth');
+const { getBucket, ObjectId } = require('../mongo');
 
 const router = express.Router();
 
@@ -31,11 +32,11 @@ router.post('/', async (req, res) => {
   }
 });
 
-// Admin: list assets with company and location names
+// Admin: list assets with company, location, and acknowledgement status
 router.get('/', requireAdmin, async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT a.id, a.name, a.details, a.serial_number, a.company_id, a.location_id, a.bill_url, a.created_at,
+      `SELECT a.id, a.name, a.details, a.serial_number, a.company_id, a.location_id, a.bill_url, a.created_at, a.acknowledged_at,
               c.name AS company_name,
               l.name AS location_name
        FROM public.assets a
@@ -52,6 +53,7 @@ router.get('/', requireAdmin, async (req, res) => {
       location_id: r.location_id,
       bill_url: r.bill_url,
       created_at: r.created_at,
+      acknowledged_at: r.acknowledged_at,
       companies: r.company_name ? { name: r.company_name } : null,
       locations: r.location_name ? { name: r.location_name } : null,
     }));
@@ -59,6 +61,49 @@ router.get('/', requireAdmin, async (req, res) => {
   } catch (err) {
     console.error('Assets list error:', err);
     res.status(500).json({ error: 'Failed to load assets' });
+  }
+});
+
+// Admin: acknowledge an asset (onboarding was done by anyone; admin confirms)
+router.patch('/:id/acknowledge', requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await pool.query(
+      `UPDATE public.assets SET acknowledged_at = COALESCE(acknowledged_at, NOW()) WHERE id = $1 RETURNING id, acknowledged_at`,
+      [id]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Asset not found' });
+    }
+    res.json({ id: result.rows[0].id, acknowledged_at: result.rows[0].acknowledged_at });
+  } catch (err) {
+    console.error('Acknowledge error:', err);
+    res.status(500).json({ error: 'Failed to acknowledge asset' });
+  }
+});
+
+// Admin: delete an asset (with optional GridFS file cleanup)
+router.delete('/:id', requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const assetResult = await pool.query('SELECT id, bill_url FROM public.assets WHERE id = $1', [id]);
+    if (assetResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Asset not found' });
+    }
+    const billUrl = assetResult.rows[0].bill_url;
+    if (billUrl && ObjectId.isValid(billUrl)) {
+      try {
+        const bucket = getBucket();
+        await bucket.delete(new ObjectId(billUrl));
+      } catch (e) {
+        console.warn('GridFS delete skip:', e.message);
+      }
+    }
+    await pool.query('DELETE FROM public.assets WHERE id = $1', [id]);
+    res.status(204).send();
+  } catch (err) {
+    console.error('Delete asset error:', err);
+    res.status(500).json({ error: 'Failed to delete asset' });
   }
 });
 

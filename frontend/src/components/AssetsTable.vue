@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { getAssets, getFileViewUrl } from '../lib/api'
+import { getAssets, getFileViewUrl, acknowledgeAsset, deleteAsset } from '../lib/api'
 import { gsap } from 'gsap'
 
 interface Asset {
@@ -12,6 +12,7 @@ interface Asset {
   location_id: string | null
   bill_url: string | null
   created_at: string
+  acknowledged_at: string | null
   companies?: { name: string }
   locations?: { name: string }
 }
@@ -20,6 +21,9 @@ const assets = ref<Asset[]>([])
 const isLoading = ref(true)
 const error = ref<string | null>(null)
 const tableContainer = ref<HTMLElement | null>(null)
+const deleteTarget = ref<Asset | null>(null)
+const isDeleting = ref(false)
+const isAcknowledging = ref<string | null>(null)
 
 const handleViewBill = async (fileId: string) => {
   try {
@@ -30,13 +34,49 @@ const handleViewBill = async (fileId: string) => {
   }
 }
 
+const confirmDelete = (asset: Asset) => {
+  deleteTarget.value = asset
+}
+
+const cancelDelete = () => {
+  deleteTarget.value = null
+}
+
+const doDelete = async () => {
+  if (!deleteTarget.value) return
+  try {
+    isDeleting.value = true
+    await deleteAsset(deleteTarget.value.id)
+    assets.value = assets.value.filter((a) => a.id !== deleteTarget.value!.id)
+    deleteTarget.value = null
+  } catch (err: unknown) {
+    error.value = (err instanceof Error ? err.message : null) || 'Failed to delete asset'
+  } finally {
+    isDeleting.value = false
+  }
+}
+
+const handleAcknowledge = async (asset: Asset) => {
+  try {
+    isAcknowledging.value = asset.id
+    await acknowledgeAsset(asset.id)
+    const a = assets.value.find((x) => x.id === asset.id)
+    if (a) a.acknowledged_at = new Date().toISOString()
+  } catch (err: unknown) {
+    error.value = (err instanceof Error ? err.message : null) || 'Failed to acknowledge'
+  } finally {
+    isAcknowledging.value = null
+  }
+}
+
 const loadAssets = async () => {
   try {
     isLoading.value = true
+    error.value = null
     const data = await getAssets()
     assets.value = data || []
-  } catch (err: any) {
-    error.value = err.message || 'Failed to load assets'
+  } catch (err: unknown) {
+    error.value = (err instanceof Error ? err.message : null) || 'Failed to load assets'
   } finally {
     isLoading.value = false
   }
@@ -98,7 +138,13 @@ onMounted(async () => {
               Created
             </th>
             <th class="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+              Status
+            </th>
+            <th class="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
               Bill
+            </th>
+            <th class="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+              Actions
             </th>
           </tr>
         </thead>
@@ -137,9 +183,23 @@ onMounted(async () => {
               </span>
             </td>
             <td class="px-6 py-5 whitespace-nowrap">
+              <span
+                v-if="asset.acknowledged_at"
+                class="inline-flex items-center px-3 py-1 rounded-lg text-sm font-semibold bg-green-100 text-green-800"
+              >
+                Acknowledged
+              </span>
+              <span
+                v-else
+                class="inline-flex items-center px-3 py-1 rounded-lg text-sm font-semibold bg-amber-100 text-amber-800"
+              >
+                Pending
+              </span>
+            </td>
+            <td class="px-6 py-5 whitespace-nowrap">
               <button
                 v-if="asset.bill_url"
-                @click="handleViewBill(asset.bill_url!)"
+                @click.stop="handleViewBill(asset.bill_url!)"
                 class="inline-flex items-center px-4 py-2 text-sm font-semibold text-indigo-700 bg-indigo-50 rounded-lg hover:bg-indigo-100 hover:text-indigo-900 transition-all duration-200 shadow-sm hover:shadow-md"
               >
                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -150,9 +210,27 @@ onMounted(async () => {
               </button>
               <span v-else class="text-sm text-slate-400 font-medium">-</span>
             </td>
+            <td class="px-6 py-5 whitespace-nowrap">
+              <div class="flex items-center gap-2">
+                <button
+                  v-if="!asset.acknowledged_at"
+                  @click.stop="handleAcknowledge(asset)"
+                  :disabled="isAcknowledging === asset.id"
+                  class="inline-flex items-center px-3 py-1.5 text-sm font-semibold text-green-700 bg-green-50 rounded-lg hover:bg-green-100 disabled:opacity-50"
+                >
+                  {{ isAcknowledging === asset.id ? '…' : 'Acknowledge' }}
+                </button>
+                <button
+                  @click.stop="confirmDelete(asset)"
+                  class="inline-flex items-center px-3 py-1.5 text-sm font-semibold text-red-700 bg-red-50 rounded-lg hover:bg-red-100"
+                >
+                  Delete
+                </button>
+              </div>
+            </td>
           </tr>
           <tr v-if="assets.length === 0">
-            <td colspan="6" class="px-8 py-16">
+            <td colspan="8" class="px-8 py-16">
               <div class="flex flex-col items-center justify-center">
                 <svg class="w-32 h-32 text-slate-300 mb-6" fill="none" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
                   <defs>
@@ -187,6 +265,38 @@ onMounted(async () => {
           </tr>
         </tbody>
       </table>
+    </div>
+
+    <!-- Delete confirmation modal -->
+    <div
+      v-if="deleteTarget"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="delete-modal-title"
+    >
+      <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+        <h2 id="delete-modal-title" class="text-lg font-semibold text-slate-900 mb-2">Delete asset?</h2>
+        <p class="text-sm text-slate-600 mb-6">
+          Are you sure you want to delete <strong>{{ deleteTarget.name }}</strong>? This cannot be undone.
+        </p>
+        <div class="flex justify-end gap-3">
+          <button
+            @click="cancelDelete"
+            :disabled="isDeleting"
+            class="px-4 py-2 text-sm font-medium text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            @click="doDelete"
+            :disabled="isDeleting"
+            class="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50"
+          >
+            {{ isDeleting ? 'Deleting…' : 'Delete' }}
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 </template>

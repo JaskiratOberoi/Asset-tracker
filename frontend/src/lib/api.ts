@@ -115,6 +115,29 @@ export async function getAssets() {
   return res.json()
 }
 
+export async function acknowledgeAsset(id: string) {
+  const res = await fetch(`${BASE_URL}/api/assets/${id}/acknowledge`, {
+    method: 'PATCH',
+    headers: getHeaders(true)
+  })
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}))
+    throw new Error((data as { error?: string }).error || 'Failed to acknowledge')
+  }
+  return res.json()
+}
+
+export async function deleteAsset(id: string) {
+  const res = await fetch(`${BASE_URL}/api/assets/${id}`, {
+    method: 'DELETE',
+    headers: getHeaders(true)
+  })
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}))
+    throw new Error((data as { error?: string }).error || 'Failed to delete')
+  }
+}
+
 export async function getAssetCountByCompany() {
   const res = await fetch(`${BASE_URL}/api/assets/count-by-company`, {
     headers: getHeaders(true)
