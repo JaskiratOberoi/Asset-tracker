@@ -64,7 +64,7 @@ router.get('/', requireAdmin, async (req, res) => {
   }
 });
 
-// Admin: acknowledge an asset (onboarding was done by anyone; admin confirms)
+// Admin: acknowledge an asset (onboarding was done by anyone; admin confirms) — must be before /:id
 router.patch('/:id/acknowledge', requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
@@ -79,6 +79,53 @@ router.patch('/:id/acknowledge', requireAdmin, async (req, res) => {
   } catch (err) {
     console.error('Acknowledge error:', err);
     res.status(500).json({ error: 'Failed to acknowledge asset' });
+  }
+});
+
+// Admin: update asset (description and/or serial_number)
+router.patch('/:id', requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { description, serial_number } = req.body;
+    const updates = [];
+    const values = [];
+    let paramIndex = 1;
+    if (serial_number !== undefined) {
+      updates.push(`serial_number = $${paramIndex}`);
+      values.push(serial_number && serial_number.trim() ? serial_number.trim() : null);
+      paramIndex++;
+    }
+    if (description !== undefined) {
+      updates.push(`details = COALESCE(details, '{}'::jsonb) || jsonb_build_object('description', $${paramIndex}::text)`);
+      values.push(description);
+      paramIndex++;
+    }
+    if (updates.length === 0) {
+      return res.status(400).json({ error: 'Provide description and/or serial_number' });
+    }
+    values.push(id);
+    const result = await pool.query(
+      `UPDATE public.assets SET ${updates.join(', ')} WHERE id = $${paramIndex} RETURNING id, name, details, serial_number, company_id, location_id, bill_url, created_at, acknowledged_at`,
+      values
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Asset not found' });
+    }
+    const row = result.rows[0];
+    res.json({
+      id: row.id,
+      name: row.name,
+      details: row.details,
+      serial_number: row.serial_number,
+      company_id: row.company_id,
+      location_id: row.location_id,
+      bill_url: row.bill_url,
+      created_at: row.created_at,
+      acknowledged_at: row.acknowledged_at,
+    });
+  } catch (err) {
+    console.error('Update asset error:', err);
+    res.status(500).json({ error: 'Failed to update asset' });
   }
 });
 

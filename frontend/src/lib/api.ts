@@ -127,6 +127,22 @@ export async function acknowledgeAsset(id: string) {
   return res.json()
 }
 
+export async function updateAsset(
+  id: string,
+  payload: { description?: string; serial_number?: string | null }
+) {
+  const res = await fetch(`${BASE_URL}/api/assets/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(true) },
+    body: JSON.stringify(payload)
+  })
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}))
+    throw new Error((data as { error?: string }).error || 'Failed to update asset')
+  }
+  return res.json()
+}
+
 export async function deleteAsset(id: string) {
   const res = await fetch(`${BASE_URL}/api/assets/${id}`, {
     method: 'DELETE',

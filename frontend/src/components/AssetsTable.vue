@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-import { getAssets, getFileViewUrl, acknowledgeAsset, deleteAsset } from '../lib/api'
+import { getAssets, getFileViewUrl, acknowledgeAsset, deleteAsset, updateAsset } from '../lib/api'
 import { gsap } from 'gsap'
 
 interface Asset {
@@ -22,9 +22,66 @@ const isLoading = ref(true)
 const error = ref<string | null>(null)
 const tableContainer = ref<HTMLElement | null>(null)
 const deleteTarget = ref<Asset | null>(null)
+const selectedAsset = ref<Asset | null>(null)
 const isDeleting = ref(false)
 const isAcknowledging = ref<string | null>(null)
 const isAcknowledgingAll = ref(false)
+const isEditingInModal = ref(false)
+const editDescription = ref('')
+const editSerialNumber = ref('')
+const isSavingAsset = ref(false)
+const modalError = ref<string | null>(null)
+
+const openDetailModal = (asset: Asset) => {
+  selectedAsset.value = asset
+  isEditingInModal.value = false
+  editDescription.value = asset.details?.description ?? ''
+  editSerialNumber.value = asset.serial_number ?? ''
+  modalError.value = null
+}
+
+const closeDetailModal = () => {
+  selectedAsset.value = null
+  isEditingInModal.value = false
+  modalError.value = null
+}
+
+const startEditInModal = () => {
+  if (!selectedAsset.value) return
+  editDescription.value = selectedAsset.value.details?.description ?? ''
+  editSerialNumber.value = selectedAsset.value.serial_number ?? ''
+  modalError.value = null
+  isEditingInModal.value = true
+}
+
+const cancelEditInModal = () => {
+  isEditingInModal.value = false
+  modalError.value = null
+}
+
+const saveAssetEdits = async () => {
+  if (!selectedAsset.value) return
+  modalError.value = null
+  isSavingAsset.value = true
+  try {
+    const updated = await updateAsset(selectedAsset.value.id, {
+      description: editDescription.value.trim(),
+      serial_number: editSerialNumber.value.trim() || null
+    })
+    const a = assets.value.find((x) => x.id === selectedAsset.value!.id)
+    if (a) {
+      a.details = updated.details
+      a.serial_number = updated.serial_number
+    }
+    selectedAsset.value.details = updated.details
+    selectedAsset.value.serial_number = updated.serial_number
+    isEditingInModal.value = false
+  } catch (err: unknown) {
+    modalError.value = (err instanceof Error ? err.message : null) || 'Failed to update asset'
+  } finally {
+    isSavingAsset.value = false
+  }
+}
 
 const pendingAssets = computed(() => assets.value.filter((a) => !a.acknowledged_at))
 const hasPending = computed(() => pendingAssets.value.length > 0)
@@ -155,28 +212,22 @@ onMounted(async () => {
       <table class="min-w-full divide-y divide-slate-200">
         <thead>
           <tr class="bg-slate-50/80">
-            <th class="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+            <th class="px-3 py-2.5 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
               Asset Name
             </th>
-            <th class="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
-              Serial Number
-            </th>
-            <th class="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+            <th class="px-3 py-2.5 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
               Company
             </th>
-            <th class="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+            <th class="px-3 py-2.5 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
               Location
             </th>
-            <th class="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+            <th class="px-3 py-2.5 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
               Created
             </th>
-            <th class="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
-              Status
-            </th>
-            <th class="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+            <th class="px-3 py-2.5 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
               Bill
             </th>
-            <th class="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+            <th class="px-3 py-2.5 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
               Actions
             </th>
           </tr>
@@ -185,77 +236,52 @@ onMounted(async () => {
           <tr
             v-for="asset in assets"
             :key="asset.id"
+            @click="openDetailModal(asset)"
             class="group hover:bg-gradient-to-r hover:from-indigo-50/50 hover:to-purple-50/50 transition-all duration-200 cursor-pointer border-l-4 border-transparent hover:border-indigo-400"
           >
-            <td class="px-6 py-5">
+            <td class="px-3 py-2.5">
               <div class="text-sm font-semibold text-slate-900 group-hover:text-indigo-900 transition-colors">
                 {{ asset.name }}
               </div>
-              <div v-if="asset.details?.description" class="text-sm text-slate-600 mt-1 font-normal">
-                {{ asset.details.description }}
-              </div>
             </td>
-            <td class="px-6 py-5 whitespace-nowrap">
-              <span class="text-sm text-slate-600 font-medium">
-                {{ asset.serial_number || '-' }}
-              </span>
-            </td>
-            <td class="px-6 py-5 whitespace-nowrap">
-              <span class="inline-flex items-center px-3 py-1 rounded-lg text-sm font-semibold bg-indigo-100 text-indigo-800">
+            <td class="px-3 py-2.5 whitespace-nowrap">
+              <span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold bg-indigo-100 text-indigo-800">
                 {{ (asset.companies as any)?.name || '-' }}
               </span>
             </td>
-            <td class="px-6 py-5 whitespace-nowrap">
-              <span class="text-sm text-slate-600 font-medium">
-                {{ (asset.locations as any)?.name || '-' }}
-              </span>
+            <td class="px-3 py-2.5 whitespace-nowrap text-sm text-slate-600">
+              {{ (asset.locations as any)?.name || '—' }}
             </td>
-            <td class="px-6 py-5 whitespace-nowrap">
-              <span class="text-sm text-slate-600 font-medium">
-                {{ new Date(asset.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) }}
-              </span>
+            <td class="px-3 py-2.5 whitespace-nowrap text-sm text-slate-600">
+              {{ new Date(asset.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) }}
             </td>
-            <td class="px-6 py-5 whitespace-nowrap">
-              <span
-                v-if="asset.acknowledged_at"
-                class="inline-flex items-center px-3 py-1 rounded-lg text-sm font-semibold bg-green-100 text-green-800"
-              >
-                Acknowledged
-              </span>
-              <span
-                v-else
-                class="inline-flex items-center px-3 py-1 rounded-lg text-sm font-semibold bg-amber-100 text-amber-800"
-              >
-                Pending
-              </span>
-            </td>
-            <td class="px-6 py-5 whitespace-nowrap">
+            <td class="px-3 py-2.5 whitespace-nowrap">
               <button
                 v-if="asset.bill_url"
                 @click.stop="handleViewBill(asset.bill_url!)"
-                class="inline-flex items-center px-4 py-2 text-sm font-semibold text-indigo-700 bg-indigo-50 rounded-lg hover:bg-indigo-100 hover:text-indigo-900 transition-all duration-200 shadow-sm hover:shadow-md"
+                class="inline-flex items-center px-2 py-1.5 text-xs font-semibold text-indigo-700 bg-indigo-50 rounded-md hover:bg-indigo-100 hover:text-indigo-900 transition-all duration-200"
               >
-                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                 </svg>
                 View Bill
               </button>
-              <span v-else class="text-sm text-slate-400 font-medium">-</span>
+              <span v-else class="text-xs text-slate-400">—</span>
             </td>
-            <td class="px-6 py-5 whitespace-nowrap">
+            <td class="px-3 py-2.5 whitespace-nowrap">
               <div class="flex items-center gap-2">
                 <button
                   v-if="!asset.acknowledged_at"
                   @click.stop="handleAcknowledge(asset)"
                   :disabled="isAcknowledging === asset.id"
-                  class="inline-flex items-center px-3 py-1.5 text-sm font-semibold text-green-700 bg-green-50 rounded-lg hover:bg-green-100 disabled:opacity-50"
+                  class="inline-flex items-center px-2 py-1 text-xs font-semibold text-green-700 bg-green-50 rounded-md hover:bg-green-100 disabled:opacity-50"
                 >
                   {{ isAcknowledging === asset.id ? '…' : 'Acknowledge' }}
                 </button>
                 <button
                   @click.stop="confirmDelete(asset)"
-                  class="inline-flex items-center px-3 py-1.5 text-sm font-semibold text-red-700 bg-red-50 rounded-lg hover:bg-red-100"
+                  class="inline-flex items-center px-2 py-1 text-xs font-semibold text-red-700 bg-red-50 rounded-md hover:bg-red-100"
                 >
                   Delete
                 </button>
@@ -263,7 +289,7 @@ onMounted(async () => {
             </td>
           </tr>
           <tr v-if="assets.length === 0">
-            <td colspan="8" class="px-8 py-16">
+            <td colspan="6" class="px-8 py-16">
               <div class="flex flex-col items-center justify-center">
                 <svg class="w-32 h-32 text-slate-300 mb-6" fill="none" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
                   <defs>
@@ -301,15 +327,131 @@ onMounted(async () => {
       </div>
     </div>
 
-    <!-- Delete confirmation modal -->
+    <!-- Asset detail modal (teleported to body for full-page overlay) -->
+    <Teleport to="body">
+    <div
+      v-if="selectedAsset"
+      class="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="detail-modal-title"
+      @click.self="closeDetailModal"
+    >
+      <div class="bg-white rounded-xl shadow-xl max-w-lg w-full p-6">
+        <div class="flex justify-between items-start mb-6">
+          <div>
+            <h2 id="detail-modal-title" class="text-lg font-semibold text-slate-900">
+              {{ selectedAsset.name }}
+            </h2>
+            <p v-if="isEditingInModal" class="text-xs text-indigo-600 font-medium mt-1">Editing description & serial number</p>
+          </div>
+          <button
+            type="button"
+            @click="closeDetailModal"
+            class="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition"
+            aria-label="Close"
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <div v-if="modalError" class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800">
+          {{ modalError }}
+        </div>
+        <dl class="space-y-4">
+          <div>
+            <dt class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Description</dt>
+            <dd v-if="!isEditingInModal" class="text-sm text-slate-700 min-h-[2.5rem] py-1">
+              {{ selectedAsset.details?.description || '—' }}
+            </dd>
+            <dd v-else class="space-y-0">
+              <textarea
+                v-model="editDescription"
+                rows="3"
+                spellcheck="false"
+                class="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                placeholder="Asset description"
+              />
+            </dd>
+          </div>
+          <div>
+            <dt class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Serial number</dt>
+            <dd v-if="!isEditingInModal" class="text-sm text-slate-700 min-h-[2.5rem] py-1">
+              {{ selectedAsset.serial_number || '—' }}
+            </dd>
+            <dd v-else>
+              <input
+                v-model="editSerialNumber"
+                type="text"
+                class="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                placeholder="Serial number"
+              />
+            </dd>
+          </div>
+          <div>
+            <dt class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Status</dt>
+            <dd>
+              <span
+                v-if="selectedAsset.acknowledged_at"
+                class="inline-flex items-center px-3 py-1 rounded-lg text-sm font-semibold bg-green-100 text-green-800"
+              >
+                Acknowledged
+              </span>
+              <span
+                v-else
+                class="inline-flex items-center px-3 py-1 rounded-lg text-sm font-semibold bg-amber-100 text-amber-800"
+              >
+                Pending
+              </span>
+            </dd>
+          </div>
+        </dl>
+        <div class="mt-6 pt-4 border-t border-slate-200 flex flex-col gap-2">
+          <template v-if="isEditingInModal">
+            <div class="flex gap-2">
+              <button
+                type="button"
+                @click="saveAssetEdits"
+                :disabled="isSavingAsset"
+                class="flex-1 py-2.5 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition"
+              >
+                {{ isSavingAsset ? 'Saving…' : 'Save' }}
+              </button>
+              <button
+                type="button"
+                @click="cancelEditInModal"
+                :disabled="isSavingAsset"
+                class="flex-1 py-2.5 text-sm font-medium text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 disabled:opacity-50 transition"
+              >
+                Cancel
+              </button>
+            </div>
+          </template>
+          <template v-else>
+            <button
+              type="button"
+              @click="startEditInModal"
+              class="w-full py-2.5 text-sm font-medium text-indigo-700 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition"
+            >
+              Edit description & serial number
+            </button>
+          </template>
+        </div>
+      </div>
+    </div>
+    </Teleport>
+
+    <!-- Delete confirmation modal (teleported to body for full-page overlay) -->
+    <Teleport to="body">
     <div
       v-if="deleteTarget"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      class="fixed inset-0 z-[110] flex items-center justify-center bg-black/50 p-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby="delete-modal-title"
     >
-      <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+      <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6" @click.stop>
         <h2 id="delete-modal-title" class="text-lg font-semibold text-slate-900 mb-2">Delete asset?</h2>
         <p class="text-sm text-slate-600 mb-6">
           Are you sure you want to delete <strong>{{ deleteTarget.name }}</strong>? This cannot be undone.
@@ -332,5 +474,6 @@ onMounted(async () => {
         </div>
       </div>
     </div>
+    </Teleport>
   </div>
 </template>
