@@ -2,6 +2,7 @@ const express = require('express');
 const { pool } = require('../db');
 const { requireAdmin } = require('../middleware/auth');
 const { getBucket, ObjectId } = require('../mongo');
+const { upload, storeInGridFS } = require('../upload');
 
 const router = express.Router();
 
@@ -64,6 +65,46 @@ router.get('/', requireAdmin, async (req, res) => {
   }
 });
 
+// Admin: chart endpoints (must be before /:id so path segments are not matched as id)
+router.get('/count-by-company', requireAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT c.id, c.name, COUNT(a.id)::int AS count
+       FROM public.companies c
+       LEFT JOIN public.assets a ON a.company_id = c.id
+       GROUP BY c.id, c.name
+       ORDER BY c.name`
+    );
+    res.json(result.rows.map((r) => ({ id: r.id, name: r.name, assetCount: r.count })));
+  } catch (err) {
+    console.error('Count by company error:', err);
+    res.status(500).json({ error: 'Failed to load counts' });
+  }
+});
+
+router.get('/spends-by-company', requireAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT c.id, c.name,
+         COALESCE(SUM(
+           CASE
+             WHEN a.details IS NOT NULL AND a.details ? 'cost' AND (a.details->>'cost') ~ '^[0-9]+(\\.[0-9]*)?$'
+             THEN (a.details->>'cost')::numeric
+             ELSE 0
+           END
+         ), 0)::double precision AS total_spend
+       FROM public.companies c
+       LEFT JOIN public.assets a ON a.company_id = c.id
+       GROUP BY c.id, c.name
+       ORDER BY c.name`
+    );
+    res.json(result.rows.map((r) => ({ id: r.id, name: r.name, totalSpend: Number(r.total_spend) })));
+  } catch (err) {
+    console.error('Spends by company error:', err);
+    res.status(500).json({ error: 'Failed to load spends' });
+  }
+});
+
 // Admin: acknowledge an asset (onboarding was done by anyone; admin confirms) — must be before /:id
 router.patch('/:id/acknowledge', requireAdmin, async (req, res) => {
   try {
@@ -79,6 +120,75 @@ router.patch('/:id/acknowledge', requireAdmin, async (req, res) => {
   } catch (err) {
     console.error('Acknowledge error:', err);
     res.status(500).json({ error: 'Failed to acknowledge asset' });
+  }
+});
+
+// Admin: upload or replace bill for an asset (must be before /:id)
+router.post('/:id/bill', requireAdmin, upload.single('billFile'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+    const assetResult = await pool.query('SELECT id, bill_url FROM public.assets WHERE id = $1', [id]);
+    if (assetResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Asset not found' });
+    }
+    const oldBillUrl = assetResult.rows[0].bill_url;
+    const fileId = await storeInGridFS(
+      req.file.buffer,
+      req.file.originalname,
+      req.file.mimetype
+    );
+    await pool.query(
+      'UPDATE public.assets SET bill_url = $1 WHERE id = $2',
+      [fileId, id]
+    );
+    if (oldBillUrl && ObjectId.isValid(oldBillUrl)) {
+      try {
+        const bucket = getBucket();
+        await bucket.delete(new ObjectId(oldBillUrl));
+      } catch (e) {
+        console.warn('GridFS delete old bill skip:', e.message);
+      }
+    }
+    const result = await pool.query(
+      'SELECT id, name, details, serial_number, company_id, location_id, bill_url, created_at, acknowledged_at FROM public.assets WHERE id = $1',
+      [id]
+    );
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Upload bill error:', err);
+    res.status(500).json({ error: err.message || 'Failed to upload bill' });
+  }
+});
+
+// Admin: remove bill from an asset (must be before /:id)
+router.delete('/:id/bill', requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const assetResult = await pool.query('SELECT id, bill_url FROM public.assets WHERE id = $1', [id]);
+    if (assetResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Asset not found' });
+    }
+    const billUrl = assetResult.rows[0].bill_url;
+    if (billUrl && ObjectId.isValid(billUrl)) {
+      try {
+        const bucket = getBucket();
+        await bucket.delete(new ObjectId(billUrl));
+      } catch (e) {
+        console.warn('GridFS delete skip:', e.message);
+      }
+    }
+    await pool.query('UPDATE public.assets SET bill_url = NULL WHERE id = $1', [id]);
+    const result = await pool.query(
+      'SELECT id, name, details, serial_number, company_id, location_id, bill_url, created_at, acknowledged_at FROM public.assets WHERE id = $1',
+      [id]
+    );
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Delete bill error:', err);
+    res.status(500).json({ error: 'Failed to remove bill' });
   }
 });
 
@@ -184,44 +294,6 @@ router.delete('/:id', requireAdmin, async (req, res) => {
   } catch (err) {
     console.error('Delete asset error:', err);
     res.status(500).json({ error: 'Failed to delete asset' });
-  }
-});
-
-// Admin: asset count by company (for charts)
-router.get('/count-by-company', requireAdmin, async (req, res) => {
-  try {
-    const result = await pool.query(
-      `SELECT c.id, c.name, COUNT(a.id)::int AS count
-       FROM public.companies c
-       LEFT JOIN public.assets a ON a.company_id = c.id
-       GROUP BY c.id, c.name
-       ORDER BY c.name`
-    );
-    res.json(result.rows.map((r) => ({ id: r.id, name: r.name, assetCount: r.count })));
-  } catch (err) {
-    console.error('Count by company error:', err);
-    res.status(500).json({ error: 'Failed to load counts' });
-  }
-});
-
-// Admin: total spend (cost) by company (for spends chart)
-router.get('/spends-by-company', requireAdmin, async (req, res) => {
-  try {
-    const result = await pool.query(
-      `SELECT c.id, c.name,
-         COALESCE(SUM(
-           CASE WHEN a.details IS NOT NULL AND jsonb_typeof(a.details->'cost') = 'number'
-           THEN (a.details->>'cost')::numeric ELSE 0 END
-         ), 0)::double precision AS total_spend
-       FROM public.companies c
-       LEFT JOIN public.assets a ON a.company_id = c.id
-       GROUP BY c.id, c.name
-       ORDER BY c.name`
-    );
-    res.json(result.rows.map((r) => ({ id: r.id, name: r.name, totalSpend: Number(r.total_spend) })));
-  } catch (err) {
-    console.error('Spends by company error:', err);
-    res.status(500).json({ error: 'Failed to load spends' });
   }
 });
 
