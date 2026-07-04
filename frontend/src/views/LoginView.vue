@@ -8,6 +8,7 @@ const router = useRouter()
 const route = useRoute()
 const email = ref('')
 const password = ref('')
+const showPassword = ref(false)
 const error = ref<string | null>(null)
 const isLoading = ref(false)
 const loginContainer = ref<HTMLElement | null>(null)
@@ -95,9 +96,19 @@ onUnmounted(() => {
   <div class="min-h-screen bg-slate-50">
     <!-- Header - matches AdminDashboardView -->
     <header class="relative z-20 bg-white border-b border-slate-200 shadow-sm">
-      <div class="max-w-7xl mx-auto px-8 py-6">
-        <h1 class="text-2xl font-semibold text-slate-900">Asset Tracker</h1>
-        <p class="text-sm text-slate-500 mt-1">Admin console</p>
+      <div class="max-w-7xl mx-auto px-6 lg:px-8 py-4">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-sm shrink-0">
+            <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M11.25 3.03a.75.75 0 01.75 0l8.25 4.76a.75.75 0 010 1.3L12 13.85 3.75 9.09a.75.75 0 010-1.3l7.5-4.76z" opacity=".9"/>
+              <path d="M3 11.38l8.25 4.77v5.32L3.38 16.9A.75.75 0 013 16.25v-4.87zM21 11.38v4.87a.75.75 0 01-.38.65l-7.87 4.57v-5.32L21 11.38z"/>
+            </svg>
+          </div>
+          <div>
+            <h1 class="text-xl font-semibold text-slate-900">Asset Tracker</h1>
+            <p class="text-sm text-slate-500">Admin console</p>
+          </div>
+        </div>
       </div>
     </header>
 
@@ -198,16 +209,33 @@ onUnmounted(() => {
               <label for="password" class="block text-sm font-medium text-slate-700 mb-2">
                 Password
               </label>
-              <input
-                id="password"
-                v-model="password"
-                type="password"
-                required
-                autocomplete="current-password"
-                class="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
-                placeholder="Enter your password"
-                :disabled="isLoading"
-              />
+              <div class="relative">
+                <input
+                  id="password"
+                  v-model="password"
+                  :type="showPassword ? 'text' : 'password'"
+                  required
+                  autocomplete="current-password"
+                  class="w-full px-4 py-3 pr-12 bg-white border border-slate-300 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
+                  placeholder="Enter your password"
+                  :disabled="isLoading"
+                />
+                <button
+                  type="button"
+                  @click="showPassword = !showPassword"
+                  class="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition"
+                  :aria-label="showPassword ? 'Hide password' : 'Show password'"
+                  tabindex="-1"
+                >
+                  <svg v-if="showPassword" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                  </svg>
+                  <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                </button>
+              </div>
             </div>
 
             <button

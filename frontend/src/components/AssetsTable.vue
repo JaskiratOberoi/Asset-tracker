@@ -33,11 +33,65 @@ const editSerialNumber = ref('')
 const editCompanyId = ref('')
 const editLocationId = ref('')
 const editAcknowledged = ref(false)
+const editCost = ref('')
 const isSavingAsset = ref(false)
 const modalError = ref<string | null>(null)
 
 const companies = ref<Array<{ id: string; name: string }>>([])
 const locations = ref<Array<{ id: string; name: string; company_id: string }>>([])
+
+// --- Search & filters ---
+const searchQuery = ref('')
+// Filter by location NAME (not id): assets may reference duplicate location rows for the
+// same site, but the API returns the joined name, which is stable across duplicates.
+const filterLocationName = ref('')
+const filterStatus = ref<'all' | 'pending' | 'acknowledged'>('all')
+
+const locationFilterOptions = computed(() =>
+  [...new Set(locations.value.map((l) => l.name))].sort()
+)
+
+const filteredAssets = computed(() => {
+  const q = searchQuery.value.trim().toLowerCase()
+  return assets.value.filter((a) => {
+    if (
+      q &&
+      !(
+        a.name.toLowerCase().includes(q) ||
+        (a.serial_number ?? '').toLowerCase().includes(q) ||
+        (a.details?.description ?? '').toLowerCase().includes(q) ||
+        ((a.locations as any)?.name ?? '').toLowerCase().includes(q)
+      )
+    )
+      return false
+    if (filterLocationName.value && (a.locations as any)?.name !== filterLocationName.value) return false
+    if (filterStatus.value === 'pending' && a.acknowledged_at) return false
+    if (filterStatus.value === 'acknowledged' && !a.acknowledged_at) return false
+    return true
+  })
+})
+
+const hasActiveFilters = computed(
+  () => !!searchQuery.value.trim() || !!filterLocationName.value || filterStatus.value !== 'all'
+)
+
+const clearFilters = () => {
+  searchQuery.value = ''
+  filterLocationName.value = ''
+  filterStatus.value = 'all'
+}
+
+const formatINR = (n: unknown): string =>
+  typeof n === 'number' && !Number.isNaN(n)
+    ? '₹' + n.toLocaleString('en-IN', { maximumFractionDigits: 0 })
+    : '—'
+
+const filteredTotalValue = computed(() =>
+  filteredAssets.value.reduce(
+    (s, a) => s + (typeof a.details?.cost === 'number' && !Number.isNaN(a.details.cost) ? a.details.cost : 0),
+    0
+  )
+)
 
 const locationsForSelectedCompany = computed(() => {
   const companyId = isEditingInModal.value ? editCompanyId.value : selectedAsset.value?.company_id
@@ -53,6 +107,8 @@ const syncEditFromAsset = () => {
   editCompanyId.value = selectedAsset.value.company_id
   editLocationId.value = selectedAsset.value.location_id ?? ''
   editAcknowledged.value = !!selectedAsset.value.acknowledged_at
+  editCost.value =
+    typeof selectedAsset.value.details?.cost === 'number' ? String(selectedAsset.value.details.cost) : ''
 }
 
 const openDetailModal = (asset: Asset) => {
@@ -92,12 +148,19 @@ const saveAssetEdits = async () => {
     modalError.value = 'Asset name is required'
     return
   }
+  const costTrimmed = editCost.value.trim()
+  const costParsed = costTrimmed === '' ? null : parseFloat(costTrimmed)
+  if (costParsed !== null && (Number.isNaN(costParsed) || costParsed < 0)) {
+    modalError.value = 'Cost must be a non-negative number'
+    return
+  }
   modalError.value = null
   isSavingAsset.value = true
   try {
     const updated = await updateAsset(selectedAsset.value.id, {
       name: editName.value.trim(),
       description: editDescription.value.trim(),
+      cost: costParsed,
       serial_number: editSerialNumber.value.trim() || null,
       company_id: editCompanyId.value || undefined,
       location_id: editLocationId.value || null,
@@ -215,12 +278,15 @@ const loadAssets = async () => {
 onMounted(async () => {
   await Promise.all([loadAssets(), getCompanies().then((r) => { companies.value = r }), getLocations().then((r) => { locations.value = r })])
   if (tableContainer.value) {
-    gsap.from(tableContainer.value.querySelectorAll('tr'), {
+    // Fade the whole table in once. A per-row stagger was previously used, but with
+    // a large asset list it cascaded over several seconds and left lower rows stuck
+    // invisible ("fading into the scroll"). clearProps ensures no residual opacity.
+    gsap.from(tableContainer.value, {
       opacity: 0,
-      x: -20,
+      y: 12,
       duration: 0.4,
-      stagger: 0.05,
-      ease: 'power2.out'
+      ease: 'power2.out',
+      clearProps: 'opacity,transform'
     })
   }
 })
@@ -248,17 +314,52 @@ onMounted(async () => {
     </div>
 
     <div v-else>
-      <div class="flex justify-end mb-4">
+      <!-- Toolbar: search + filters + bulk actions -->
+      <div class="flex flex-col md:flex-row md:items-center gap-3 mb-4">
+        <div class="relative flex-1 min-w-[200px]">
+          <svg class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          <input
+            v-model="searchQuery"
+            type="text"
+            placeholder="Search name, serial, description, location…"
+            class="w-full pl-9 pr-3 py-2 text-sm bg-white border border-slate-300 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+          />
+        </div>
+        <select
+          v-model="filterLocationName"
+          class="px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        >
+          <option value="">All locations</option>
+          <option v-for="name in locationFilterOptions" :key="name" :value="name">{{ name }}</option>
+        </select>
+        <select
+          v-model="filterStatus"
+          class="px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        >
+          <option value="all">All statuses</option>
+          <option value="pending">Pending</option>
+          <option value="acknowledged">Acknowledged</option>
+        </select>
+        <button
+          v-if="hasActiveFilters"
+          @click="clearFilters"
+          class="px-3 py-2 text-sm font-medium text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200"
+        >
+          Clear
+        </button>
         <button
           v-if="hasPending"
           @click="handleAcknowledgeAll"
           :disabled="isAcknowledgingAll"
-          class="inline-flex items-center px-4 py-2 text-sm font-semibold text-green-700 bg-green-50 rounded-lg hover:bg-green-100 disabled:opacity-50"
+          class="inline-flex items-center px-4 py-2 text-sm font-semibold text-green-700 bg-green-50 rounded-lg hover:bg-green-100 disabled:opacity-50 whitespace-nowrap"
         >
           {{ isAcknowledgingAll ? 'Acknowledging…' : `Acknowledge all (${pendingAssets.length})` }}
         </button>
       </div>
-      <div class="overflow-x-auto custom-scrollbar">
+      <!-- Desktop / tablet: table -->
+      <div class="hidden md:block overflow-x-auto custom-scrollbar">
       <table class="min-w-full divide-y divide-slate-200">
         <thead>
           <tr class="bg-slate-50/80">
@@ -270,6 +371,12 @@ onMounted(async () => {
             </th>
             <th class="px-3 py-2.5 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
               Location
+            </th>
+            <th class="px-3 py-2.5 text-right text-xs font-semibold text-slate-700 uppercase tracking-wider">
+              Cost
+            </th>
+            <th class="px-3 py-2.5 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+              Status
             </th>
             <th class="px-3 py-2.5 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
               Created
@@ -284,7 +391,7 @@ onMounted(async () => {
         </thead>
         <tbody class="bg-white divide-y divide-slate-100">
           <tr
-            v-for="asset in assets"
+            v-for="asset in filteredAssets"
             :key="asset.id"
             @click="openDetailModal(asset)"
             class="group hover:bg-gradient-to-r hover:from-indigo-50/50 hover:to-purple-50/50 transition-all duration-200 cursor-pointer border-l-4 border-transparent hover:border-indigo-400"
@@ -292,6 +399,9 @@ onMounted(async () => {
             <td class="px-3 py-2.5">
               <div class="text-sm font-semibold text-slate-900 group-hover:text-indigo-900 transition-colors">
                 {{ asset.name }}
+              </div>
+              <div v-if="asset.serial_number" class="text-xs text-slate-400 mt-0.5 font-mono">
+                {{ asset.serial_number }}
               </div>
             </td>
             <td class="px-3 py-2.5 whitespace-nowrap">
@@ -302,8 +412,21 @@ onMounted(async () => {
             <td class="px-3 py-2.5 whitespace-nowrap text-sm text-slate-600">
               {{ (asset.locations as any)?.name || '—' }}
             </td>
+            <td class="px-3 py-2.5 whitespace-nowrap text-sm font-semibold text-slate-800 text-right tabular-nums">
+              {{ formatINR(asset.details?.cost) }}
+            </td>
+            <td class="px-3 py-2.5 whitespace-nowrap">
+              <span
+                v-if="asset.acknowledged_at"
+                class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold bg-green-100 text-green-800"
+              >Acknowledged</span>
+              <span
+                v-else
+                class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold bg-amber-100 text-amber-800"
+              >Pending</span>
+            </td>
             <td class="px-3 py-2.5 whitespace-nowrap text-sm text-slate-600">
-              {{ new Date(asset.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) }}
+              {{ new Date(asset.created_at).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' }) }}
             </td>
             <td class="px-3 py-2.5 whitespace-nowrap">
               <button
@@ -338,8 +461,18 @@ onMounted(async () => {
               </div>
             </td>
           </tr>
+          <tr v-if="assets.length > 0 && filteredAssets.length === 0">
+            <td colspan="8" class="px-8 py-12">
+              <div class="text-center">
+                <p class="text-sm font-medium text-slate-600 mb-2">No assets match your search / filters</p>
+                <button @click="clearFilters" class="text-sm font-semibold text-indigo-600 hover:text-indigo-800">
+                  Clear filters
+                </button>
+              </div>
+            </td>
+          </tr>
           <tr v-if="assets.length === 0">
-            <td colspan="6" class="px-8 py-16">
+            <td colspan="8" class="px-8 py-16">
               <div class="flex flex-col items-center justify-center">
                 <svg class="w-32 h-32 text-slate-300 mb-6" fill="none" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
                   <defs>
@@ -374,6 +507,103 @@ onMounted(async () => {
           </tr>
         </tbody>
       </table>
+      </div>
+
+      <!-- Mobile: card list (name gets full width; cost, chips and actions stacked) -->
+      <div class="md:hidden">
+        <div v-if="assets.length > 0 && filteredAssets.length === 0" class="py-10 text-center">
+          <p class="text-sm font-medium text-slate-600 mb-2">No assets match your search / filters</p>
+          <button @click="clearFilters" class="text-sm font-semibold text-indigo-600 hover:text-indigo-800">
+            Clear filters
+          </button>
+        </div>
+        <div v-else-if="assets.length === 0" class="py-12 text-center">
+          <h3 class="text-base font-semibold text-slate-900 mb-1">No assets found</h3>
+          <p class="text-sm text-slate-500 mb-4">Get started by adding your first asset.</p>
+          <a
+            href="/onboarding"
+            class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700"
+          >
+            Add Asset
+          </a>
+        </div>
+        <ul v-else class="divide-y divide-slate-100">
+          <li
+            v-for="asset in filteredAssets"
+            :key="asset.id"
+            @click="openDetailModal(asset)"
+            class="py-3.5 cursor-pointer active:bg-indigo-50/40 transition-colors"
+          >
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">
+                <p class="text-sm font-semibold text-slate-900 leading-snug">{{ asset.name }}</p>
+                <p v-if="asset.serial_number" class="text-xs text-slate-400 font-mono mt-0.5 break-all">
+                  {{ asset.serial_number }}
+                </p>
+              </div>
+              <p class="text-sm font-bold text-slate-900 tabular-nums shrink-0">
+                {{ formatINR(asset.details?.cost) }}
+              </p>
+            </div>
+            <div class="flex flex-wrap items-center gap-1.5 mt-2">
+              <span
+                v-if="(asset.locations as any)?.name"
+                class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-slate-100 text-slate-700"
+              >
+                <svg class="w-3 h-3 mr-1 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                {{ (asset.locations as any)?.name }}
+              </span>
+              <span
+                v-if="asset.acknowledged_at"
+                class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold bg-green-100 text-green-800"
+              >Acknowledged</span>
+              <span
+                v-else
+                class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold bg-amber-100 text-amber-800"
+              >Pending</span>
+              <span class="text-xs text-slate-400">
+                {{ new Date(asset.created_at).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' }) }}
+              </span>
+            </div>
+            <div class="flex items-center gap-2 mt-2.5" @click.stop>
+              <button
+                v-if="asset.bill_url"
+                @click="handleViewBill(asset.bill_url!)"
+                class="inline-flex items-center px-2.5 py-1.5 text-xs font-semibold text-indigo-700 bg-indigo-50 rounded-md hover:bg-indigo-100"
+              >
+                View Bill
+              </button>
+              <button
+                v-if="!asset.acknowledged_at"
+                @click="handleAcknowledge(asset)"
+                :disabled="isAcknowledging === asset.id"
+                class="inline-flex items-center px-2.5 py-1.5 text-xs font-semibold text-green-700 bg-green-50 rounded-md hover:bg-green-100 disabled:opacity-50"
+              >
+                {{ isAcknowledging === asset.id ? '…' : 'Acknowledge' }}
+              </button>
+              <button
+                @click="confirmDelete(asset)"
+                class="inline-flex items-center px-2.5 py-1.5 text-xs font-semibold text-red-700 bg-red-50 rounded-md hover:bg-red-100"
+              >
+                Delete
+              </button>
+            </div>
+          </li>
+        </ul>
+      </div>
+      <!-- Summary footer -->
+      <div v-if="assets.length > 0" class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 mt-4 pt-3 border-t border-slate-200 text-sm text-slate-600">
+        <span>
+          Showing <strong class="text-slate-900">{{ filteredAssets.length }}</strong> of
+          <strong class="text-slate-900">{{ assets.length }}</strong> assets
+        </span>
+        <span>
+          Total value shown:
+          <strong class="text-slate-900 tabular-nums">{{ formatINR(filteredTotalValue) }}</strong>
+        </span>
       </div>
     </div>
 
@@ -435,6 +665,25 @@ onMounted(async () => {
                 class="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                 placeholder="Asset description"
               />
+            </dd>
+          </div>
+          <div>
+            <dt class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Cost</dt>
+            <dd v-if="!isEditingInModal" class="text-sm font-semibold text-slate-900 min-h-[2.5rem] py-1">
+              {{ formatINR(selectedAsset.details?.cost) }}
+            </dd>
+            <dd v-else>
+              <div class="relative">
+                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-500">₹</span>
+                <input
+                  v-model="editCost"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  class="w-full pl-7 pr-3 py-2 text-sm bg-white border border-slate-300 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  placeholder="Cost in INR"
+                />
+              </div>
             </dd>
           </div>
           <div>
@@ -504,7 +753,7 @@ onMounted(async () => {
           <div>
             <dt class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Created</dt>
             <dd class="text-sm text-slate-700 py-1">
-              {{ new Date(selectedAsset.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) }}
+              {{ new Date(selectedAsset.created_at).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' }) }}
             </dd>
           </div>
           <div>
