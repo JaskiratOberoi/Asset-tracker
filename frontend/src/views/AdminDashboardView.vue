@@ -133,13 +133,14 @@ const recentAssets = computed(() =>
           </div>
         </div>
         <div class="flex items-center gap-2 shrink-0">
-          <a href="/onboarding" class="panel-btn-primary py-2">
+          <a href="/onboarding" class="panel-btn-primary py-2 px-3 sm:px-4">
             <svg class="w-3.5 h-3.5" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
             </svg>
-            Register asset
+            <span class="hidden sm:inline">Register asset</span>
+            <span class="sm:hidden">Register</span>
           </a>
-          <button class="panel-btn-secondary py-2" @click="handleLogout">Log out</button>
+          <button class="panel-btn-secondary py-2 px-3 sm:px-4" @click="handleLogout">Log out</button>
         </div>
       </div>
     </header>
@@ -213,7 +214,7 @@ const recentAssets = computed(() =>
           </div>
         </section>
 
-        <section class="bento-card panel-module lg:col-span-3">
+        <section class="bento-card panel-module col-span-2 lg:col-span-3">
           <div class="module-head">
             <h2 class="silk-label-bright">Sites</h2>
             <span class="silk-label text-silkfaint">Active</span>
@@ -304,7 +305,7 @@ const recentAssets = computed(() =>
           <div
             v-for="(a, i) in recentAssets"
             :key="a.id"
-            class="px-4 py-3.5 flex items-start gap-3 border-seam/60 border-t first:border-t-0 sm:[&:nth-child(2)]:border-t-0 lg:[&:nth-child(3)]:border-t-0"
+            class="min-w-0 px-4 py-3.5 flex items-start gap-3 border-seam/60 border-t first:border-t-0 sm:[&:nth-child(2)]:border-t-0 lg:[&:nth-child(3)]:border-t-0"
             :class="[i % 2 === 1 ? 'sm:border-l' : '', i % 3 !== 0 ? 'lg:border-l' : 'lg:border-l-0']"
           >
             <span class="led mt-1 shrink-0" :class="a.acknowledged_at === null ? 'led-amber led-blink' : 'led-green'"></span>

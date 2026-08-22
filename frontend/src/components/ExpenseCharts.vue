@@ -136,12 +136,12 @@ const siteRow = computed(() =>
 <template>
   <div class="grid lg:grid-cols-12 gap-4">
     <!-- spend by site -->
-    <section class="bento-card panel-module lg:col-span-7">
+    <section class="bento-card panel-module min-w-0 lg:col-span-7">
       <div class="module-head">
         <h2 class="silk-label-bright">Spend by site</h2>
         <span class="silk-label text-silkfaint">{{ loading ? '—' : inr(totalSpend) + ' total' }}</span>
       </div>
-      <div class="px-4 py-4 h-64">
+      <div class="px-4 py-4 h-64 relative overflow-hidden">
         <div v-if="loading" class="h-full flex items-center justify-center text-[13px] text-silkfaint">
           Reading register…
         </div>
@@ -153,12 +153,12 @@ const siteRow = computed(() =>
     </section>
 
     <!-- register share by company -->
-    <section class="bento-card panel-module lg:col-span-5">
+    <section class="bento-card panel-module min-w-0 lg:col-span-5">
       <div class="module-head">
         <h2 class="silk-label-bright">Register share by company</h2>
         <span class="silk-label text-silkfaint">By count</span>
       </div>
-      <div class="px-4 py-4 min-h-[10rem]">
+      <div class="px-4 py-4" :class="loading || byCompany.length === 0 ? 'min-h-[10rem]' : ''">
         <div v-if="loading" class="h-full flex items-center justify-center text-[13px] text-silkfaint">
           Reading register…
         </div>
@@ -168,7 +168,7 @@ const siteRow = computed(() =>
         <ul v-else class="space-y-4">
           <li v-for="(c, i) in byCompany" :key="c.id">
             <div class="flex items-baseline justify-between gap-3 mb-1.5">
-              <span class="text-[13px] text-paper font-medium truncate" :title="c.name">{{ c.name }}</span>
+              <span class="text-[13px] text-paper font-medium truncate min-w-0" :title="c.name">{{ c.name }}</span>
               <span class="text-[11px] text-silkdim tabular-nums shrink-0">
                 {{ c.count }} · {{ Math.round(c.share * 100) }}% · {{ inr(c.spend) }}
               </span>

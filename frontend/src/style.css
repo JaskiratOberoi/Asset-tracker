@@ -43,7 +43,9 @@
   }
 }
 
-@layer utilities {
+/* Component classes live in the components layer so markup utilities
+   (pl-9, py-2, …) can override their paddings and colors. */
+@layer components {
   /* ---------- silkscreen labels ---------- */
   .silk-label {
     @apply font-mono uppercase text-silkdim;
@@ -70,7 +72,7 @@
 
   /* module title bar: silkscreen caps + rule, like a section of the faceplate */
   .module-head {
-    @apply flex items-baseline justify-between gap-3 border-b border-seam px-4 py-2.5;
+    @apply flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 border-b border-seam px-4 py-2.5;
   }
 
   /* ---------- LEDs ---------- */
@@ -215,6 +217,9 @@
     padding: 0.5rem 0.75rem;
   }
 
+}
+
+@layer utilities {
   /* ---------- scrollbars ---------- */
   * {
     scrollbar-width: thin;
