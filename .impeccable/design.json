@@ -1,0 +1,158 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-22T00:00:00+05:30",
+  "title": "Design System: AR-9 · Computer Controlled Asset Register",
+  "extensions": {
+    "colorMeta": {
+      "step-red": { "role": "primary", "displayName": "Step Red", "canonical": "#ff3b30", "tonalRamp": ["oklch(15% 0.09 27)", "oklch(26% 0.13 27)", "oklch(37% 0.17 27)", "oklch(48% 0.21 27)", "oklch(62% 0.24 27)", "oklch(72% 0.19 27)", "oklch(83% 0.11 27)", "oklch(95% 0.03 27)"] },
+      "step-orange": { "role": "secondary", "displayName": "Step Orange", "canonical": "#ff9a00", "tonalRamp": ["oklch(15% 0.05 60)", "oklch(26% 0.08 60)", "oklch(37% 0.11 60)", "oklch(50% 0.14 60)", "oklch(63% 0.16 60)", "oklch(75% 0.17 60)", "oklch(85% 0.12 60)", "oklch(95% 0.04 60)"] },
+      "step-yellow": { "role": "secondary", "displayName": "Step Yellow", "canonical": "#ffe100", "tonalRamp": ["oklch(15% 0.04 100)", "oklch(27% 0.07 100)", "oklch(40% 0.10 100)", "oklch(53% 0.13 100)", "oklch(66% 0.16 100)", "oklch(79% 0.18 100)", "oklch(90% 0.19 100)", "oklch(96% 0.08 100)"] },
+      "step-white": { "role": "secondary", "displayName": "Step White", "canonical": "#f2f2f2", "tonalRamp": ["oklch(15% 0 0)", "oklch(27% 0 0)", "oklch(39% 0 0)", "oklch(51% 0 0)", "oklch(63% 0 0)", "oklch(75% 0 0)", "oklch(87% 0 0)", "oklch(96% 0 0)"] },
+      "led-amber": { "role": "tertiary", "displayName": "LED Amber (pending)", "canonical": "#ffb020", "tonalRamp": ["oklch(15% 0.04 75)", "oklch(26% 0.07 75)", "oklch(38% 0.10 75)", "oklch(51% 0.13 75)", "oklch(65% 0.15 75)", "oklch(79% 0.16 75)", "oklch(88% 0.12 75)", "oklch(95% 0.05 75)"] },
+      "led-green": { "role": "tertiary", "displayName": "LED Green (acknowledged)", "canonical": "#3ddc68", "tonalRamp": ["oklch(15% 0.05 150)", "oklch(26% 0.08 150)", "oklch(38% 0.12 150)", "oklch(51% 0.15 150)", "oklch(64% 0.18 150)", "oklch(78% 0.20 150)", "oklch(87% 0.15 150)", "oklch(95% 0.06 150)"] },
+      "chassis": { "role": "neutral", "displayName": "Chassis", "canonical": "#0e0e10", "tonalRamp": ["oklch(15% 0.004 280)", "oklch(26% 0.004 280)", "oklch(37% 0.004 280)", "oklch(48% 0.004 280)", "oklch(60% 0.004 280)", "oklch(71% 0.004 280)", "oklch(83% 0.004 280)", "oklch(95% 0.004 280)"] },
+      "panel": { "role": "neutral", "displayName": "Panel", "canonical": "#131316", "tonalRamp": ["oklch(15% 0.005 280)", "oklch(26% 0.005 280)", "oklch(37% 0.005 280)", "oklch(48% 0.005 280)", "oklch(60% 0.005 280)", "oklch(71% 0.005 280)", "oklch(83% 0.005 280)", "oklch(95% 0.005 280)"] },
+      "module": { "role": "neutral", "displayName": "Module", "canonical": "#1a1a1e", "tonalRamp": ["oklch(15% 0.006 280)", "oklch(26% 0.006 280)", "oklch(37% 0.006 280)", "oklch(48% 0.006 280)", "oklch(60% 0.006 280)", "oklch(71% 0.006 280)", "oklch(83% 0.006 280)", "oklch(95% 0.006 280)"] },
+      "well": { "role": "neutral", "displayName": "Well", "canonical": "#0a0a0c", "tonalRamp": ["oklch(13% 0.004 280)", "oklch(25% 0.004 280)", "oklch(37% 0.004 280)", "oklch(48% 0.004 280)", "oklch(60% 0.004 280)", "oklch(71% 0.004 280)", "oklch(83% 0.004 280)", "oklch(95% 0.004 280)"] },
+      "seam": { "role": "neutral", "displayName": "Seam", "canonical": "#26262c", "tonalRamp": ["oklch(15% 0.008 285)", "oklch(26% 0.008 285)", "oklch(37% 0.008 285)", "oklch(48% 0.008 285)", "oklch(60% 0.008 285)", "oklch(71% 0.008 285)", "oklch(83% 0.008 285)", "oklch(95% 0.008 285)"] },
+      "seam-light": { "role": "neutral", "displayName": "Seam Light", "canonical": "#33333b", "tonalRamp": ["oklch(15% 0.012 285)", "oklch(26% 0.012 285)", "oklch(37% 0.012 285)", "oklch(48% 0.012 285)", "oklch(60% 0.012 285)", "oklch(71% 0.012 285)", "oklch(83% 0.012 285)", "oklch(95% 0.012 285)"] },
+      "silk": { "role": "neutral", "displayName": "Silk", "canonical": "#bdbdbd", "tonalRamp": ["oklch(15% 0 0)", "oklch(27% 0 0)", "oklch(39% 0 0)", "oklch(51% 0 0)", "oklch(63% 0 0)", "oklch(75% 0 0)", "oklch(82% 0 0)", "oklch(95% 0 0)"] },
+      "silk-dim": { "role": "neutral", "displayName": "Silk Dim", "canonical": "#8a8a92", "tonalRamp": ["oklch(15% 0.006 285)", "oklch(26% 0.006 285)", "oklch(37% 0.006 285)", "oklch(48% 0.006 285)", "oklch(63% 0.006 285)", "oklch(73% 0.006 285)", "oklch(84% 0.006 285)", "oklch(95% 0.006 285)"] },
+      "silk-faint": { "role": "neutral", "displayName": "Silk Faint (4.5:1 floor)", "canonical": "#85858e", "tonalRamp": ["oklch(15% 0.008 285)", "oklch(26% 0.008 285)", "oklch(37% 0.008 285)", "oklch(48% 0.008 285)", "oklch(61% 0.008 285)", "oklch(72% 0.008 285)", "oklch(84% 0.008 285)", "oklch(95% 0.008 285)"] },
+      "paper": { "role": "neutral", "displayName": "Paper", "canonical": "#f2f2f2", "tonalRamp": ["oklch(15% 0 0)", "oklch(27% 0 0)", "oklch(39% 0 0)", "oklch(51% 0 0)", "oklch(63% 0 0)", "oklch(75% 0 0)", "oklch(87% 0 0)", "oklch(96% 0 0)"] }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display (Anton)", "purpose": "Statement moments only: onboarding headline, 'Asset registered' stamp, admin timeline year. Uppercase, leading-none." },
+      "plate": { "displayName": "Plate (Michroma)", "purpose": "The AR-9 model plate identity, nothing else." },
+      "body": { "displayName": "Body (Spline Sans Mono)", "purpose": "All prose, table cells, captions; 11px caption tier in Silk Dim." },
+      "label": { "displayName": "Silkscreen Label", "purpose": "Uppercase 10px mono caps at 0.14em; bright (600/Silk) for module heads, dim (500/Silk Dim) elsewhere." }
+    },
+    "shadows": [
+      { "name": "module", "value": "0 1px 0 rgba(255,255,255,0.03) inset, 0 8px 24px rgba(0,0,0,0.35)", "purpose": "Raised faceplate module." },
+      { "name": "well", "value": "inset 0 2px 6px rgba(0,0,0,0.7), inset 0 -1px 0 rgba(255,255,255,0.04)", "purpose": "Recessed wells: inputs, segment windows." },
+      { "name": "key", "value": "0 2px 0 rgba(0,0,0,0.55), 0 4px 10px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.18)", "purpose": "Step keycap at rest." },
+      { "name": "keydown", "value": "0 1px 0 rgba(0,0,0,0.55), 0 2px 4px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.12)", "purpose": "Keycap pressed, paired with translateY(1px)." },
+      { "name": "led-glow-red", "value": "0 0 6px 1px rgba(255,59,48,0.7), inset 0 0 2px rgba(255,255,255,0.5)", "purpose": "Lit red LED; green uses rgba(61,220,104,0.6), amber rgba(255,176,32,0.65)." },
+      { "name": "input-focus", "value": "inset 0 2px 6px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,59,48,0.4)", "purpose": "Focused input: well inset plus 1px red halo, no bloom." }
+    ],
+    "motion": [
+      { "name": "entrance", "value": "gsap fromTo opacity 0→1, y 12–20px→0, 0.35–0.45s, power2/power3.out, stagger 0.05", "purpose": "One entrance per surface; modules rise together, then stay put." },
+      { "name": "led-blink", "value": "1.1s steps(1) infinite, opacity 1→0.25 at 61%", "purpose": "Pending/current-month blink." },
+      { "name": "chase", "value": "620ms interval step advance around the 12-key row", "purpose": "Timeline chase light marking 'now'." },
+      { "name": "key-press", "value": "translateY(1px) + keydown shadow, transition-transform 100ms", "purpose": "Keycap press feel." },
+      { "name": "color-transition", "value": "150ms color/border transitions on buttons and inputs", "purpose": "Hover/focus state changes; color only, never position or shadow." },
+      { "name": "reduced-motion", "value": "prefers-reduced-motion collapses all animation/transition durations to 0.01ms, one iteration", "purpose": "Global kill switch including blink and chase." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Panel Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The red panel switch: primary actions in the RUN/CLEAR vocabulary.",
+      "html": "<button class=\"ds-btn-primary\">+ Register asset</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-family: 'Spline Sans Mono Variable', ui-monospace, monospace; font-size: 11px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; background: #ff3b30; color: #000; border: 1px solid #ff3b30; border-radius: 4px; padding: 10px 18px; cursor: pointer; transition: background-color 150ms, border-color 150ms; } .ds-btn-primary:hover:not(:disabled) { background: #ff554b; border-color: #ff554b; } .ds-btn-primary:focus-visible { outline: 2px solid #ff3b30; outline-offset: 2px; } .ds-btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }"
+    },
+    {
+      "name": "Secondary Panel Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Hairline-bordered transparent switch for secondary actions.",
+      "html": "<button class=\"ds-btn-secondary\">Log out</button>",
+      "css": ".ds-btn-secondary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-family: 'Spline Sans Mono Variable', ui-monospace, monospace; font-size: 11px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; background: transparent; color: #bdbdbd; border: 1px solid #33333b; border-radius: 4px; padding: 10px 18px; cursor: pointer; transition: color 150ms, border-color 150ms; } .ds-btn-secondary:hover:not(:disabled) { color: #f2f2f2; border-color: #85858e; } .ds-btn-secondary:focus-visible { outline: 2px solid #ff3b30; outline-offset: 2px; }"
+    },
+    {
+      "name": "Panel Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "A recessed well with a red caret; focus turns the border red with a 1px halo.",
+      "html": "<input class=\"ds-input\" type=\"text\" placeholder=\"ASSET NAME\" />",
+      "css": ".ds-input { width: 100%; font-family: 'Spline Sans Mono Variable', ui-monospace, monospace; font-size: 13px; background: #0a0a0c; color: #f2f2f2; caret-color: #ff3b30; border: 1px solid #26262c; border-radius: 4px; box-shadow: inset 0 2px 6px rgba(0,0,0,0.7), inset 0 -1px 0 rgba(255,255,255,0.04); padding: 10px 12px; transition: border-color 150ms; } .ds-input::placeholder { color: #8a8a92; } .ds-input:focus { outline: none; border-color: #ff3b30; box-shadow: inset 0 2px 6px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,59,48,0.4); } .ds-input:disabled { opacity: 0.5; cursor: not-allowed; }"
+    },
+    {
+      "name": "Panel Module",
+      "kind": "card",
+      "refersTo": "module",
+      "description": "The raised bento cell with a silkscreen title bar over a hairline rule.",
+      "html": "<section class=\"ds-module\"><div class=\"ds-module-head\"><h2 class=\"ds-silk-bright\">Register value</h2><span class=\"ds-silk\">₹ INR</span></div><div class=\"ds-module-body\">Module content</div></section>",
+      "css": ".ds-module { background: #1a1a1e; border: 1px solid #26262c; border-radius: 6px; box-shadow: 0 1px 0 rgba(255,255,255,0.03) inset, 0 8px 24px rgba(0,0,0,0.35); color: #f2f2f2; font-family: 'Spline Sans Mono Variable', ui-monospace, monospace; font-size: 13px; } .ds-module-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; border-bottom: 1px solid #26262c; padding: 10px 16px; } .ds-module-body { padding: 16px; } .ds-silk-bright { font-size: 10px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: #bdbdbd; margin: 0; } .ds-silk { font-size: 10px; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase; color: #8a8a92; }"
+    },
+    {
+      "name": "Status LED",
+      "kind": "custom",
+      "description": "The 8px lamp: dark at rest; red/green/amber lit with glow; blink for pending.",
+      "html": "<span class=\"ds-led\"></span> <span class=\"ds-led ds-led-green\"></span> <span class=\"ds-led ds-led-amber ds-led-blink\"></span> <span class=\"ds-led ds-led-red\"></span>",
+      "css": ".ds-led { display: inline-block; width: 8px; height: 8px; border-radius: 2px; background: #3a3a40; box-shadow: inset 0 1px 1px rgba(0,0,0,0.6); } .ds-led-red { background: #ff3b30; box-shadow: 0 0 6px 1px rgba(255,59,48,0.7), inset 0 0 2px rgba(255,255,255,0.5); } .ds-led-green { background: #3ddc68; box-shadow: 0 0 6px 1px rgba(61,220,104,0.6), inset 0 0 2px rgba(255,255,255,0.5); } .ds-led-amber { background: #ffb020; box-shadow: 0 0 6px 1px rgba(255,176,32,0.65), inset 0 0 2px rgba(255,255,255,0.5); } .ds-led-blink { animation: ds-led-blink 1.1s steps(1) infinite; } @keyframes ds-led-blink { 0%, 60% { opacity: 1; } 61%, 100% { opacity: 0.25; } }"
+    },
+    {
+      "name": "Step Key",
+      "kind": "custom",
+      "description": "A pressable rhythm-machine keycap with a lit window; unlit keys keep their hue at low lightness.",
+      "html": "<button class=\"ds-step-key ds-key-red\"><span class=\"ds-key-window ds-key-window-lit\"></span><span class=\"ds-key-count\">4</span></button> <button class=\"ds-step-key ds-key-red ds-key-unlit\"><span class=\"ds-key-window\"></span><span class=\"ds-key-count-dim\">·</span></button>",
+      "css": ".ds-step-key { position: relative; width: 56px; height: 64px; border: 1px solid rgba(0,0,0,0.6); border-radius: 4px; box-shadow: 0 2px 0 rgba(0,0,0,0.55), 0 4px 10px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.18); background-image: linear-gradient(180deg, rgba(255,255,255,0.14), rgba(255,255,255,0) 40%); cursor: pointer; transition: transform 100ms; user-select: none; } .ds-step-key:active { transform: translateY(1px); box-shadow: 0 1px 0 rgba(0,0,0,0.55), 0 2px 4px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.12); } .ds-key-red { background-color: #e0342a; } .ds-key-red.ds-key-unlit { background-color: #63201b; background-image: linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0) 40%); } .ds-key-window { position: absolute; left: 50%; transform: translateX(-50%); top: 14%; width: 34%; height: 10%; border-radius: 2px; background: rgba(0,0,0,0.55); box-shadow: inset 0 1px 1px rgba(0,0,0,0.8); } .ds-key-window-lit { background: #fff7f0; box-shadow: 0 0 8px 2px rgba(255,235,200,0.85), inset 0 0 2px rgba(255,255,255,0.9); } .ds-key-count { position: absolute; bottom: 6px; left: 50%; transform: translateX(-50%); font-family: ui-monospace, monospace; font-size: 10px; font-weight: 600; color: rgba(0,0,0,0.7); } .ds-key-count-dim { position: absolute; bottom: 6px; left: 50%; transform: translateX(-50%); font-family: ui-monospace, monospace; font-size: 10px; color: rgba(242,242,242,0.4); }"
+    },
+    {
+      "name": "Segment Window",
+      "kind": "custom",
+      "description": "A recessed right-aligned well framing the SVG 7-segment readout (digits + en-IN separators only, no ₹ glyph).",
+      "html": "<div class=\"ds-seg-window\"><span class=\"ds-seg-value\">12,40,500</span></div>",
+      "css": ".ds-seg-window { display: flex; align-items: center; justify-content: flex-end; overflow: hidden; background: #0a0a0c; border: 1px solid #000; border-radius: 4px; box-shadow: inset 0 2px 6px rgba(0,0,0,0.7), inset 0 -1px 0 rgba(255,255,255,0.04); padding: 8px 12px; } .ds-seg-value { font-family: ui-monospace, monospace; font-variant-numeric: tabular-nums; font-size: 28px; color: #ff3b30; text-shadow: 0 0 6px rgba(255,59,48,0.7); transform: skewX(-4deg); letter-spacing: 0.08em; }"
+    },
+    {
+      "name": "Faceplate Header",
+      "kind": "nav",
+      "description": "Sticky panel header: Michroma AR-9 plate, silkscreen console label, operator identity, panel buttons.",
+      "html": "<header class=\"ds-faceplate\"><div class=\"ds-faceplate-left\"><span class=\"ds-plate\">AR-9</span><span class=\"ds-tick\"></span><div><p class=\"ds-silk\">Asset Register · Console</p><p class=\"ds-operator\">Operator: ops@qugen.in</p></div></div><button class=\"ds-btn-primary\">+ Register asset</button></header>",
+      "css": ".ds-faceplate { display: flex; align-items: center; justify-content: space-between; gap: 16px; background: #131316; border-bottom: 1px solid #26262c; padding: 14px 20px; } .ds-faceplate-left { display: flex; align-items: center; gap: 12px; } .ds-plate { font-family: Michroma, 'Spline Sans Mono', sans-serif; font-size: 18px; letter-spacing: 0.025em; color: #f2f2f2; } .ds-tick { display: inline-block; width: 1px; height: 16px; background: #33333b; } .ds-silk { font-family: ui-monospace, monospace; font-size: 10px; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase; color: #8a8a92; margin: 0; } .ds-operator { font-family: ui-monospace, monospace; font-size: 11px; color: #85858e; margin: 0; } .ds-btn-primary { display: inline-flex; align-items: center; gap: 8px; font-family: ui-monospace, monospace; font-size: 11px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; background: #ff3b30; color: #000; border: 1px solid #ff3b30; border-radius: 4px; padding: 8px 18px; cursor: pointer; transition: background-color 150ms; } .ds-btn-primary:hover { background: #ff554b; }"
+    },
+    {
+      "name": "Output Meter",
+      "kind": "custom",
+      "description": "24 segments, 3px gaps, lit proportionally in a step-key hue — the register-share meter.",
+      "html": "<div class=\"ds-meter\"><span class=\"ds-meter-seg ds-lit\"></span><span class=\"ds-meter-seg ds-lit\"></span><span class=\"ds-meter-seg ds-lit\"></span><span class=\"ds-meter-seg ds-lit\"></span><span class=\"ds-meter-seg ds-lit\"></span><span class=\"ds-meter-seg ds-lit\"></span><span class=\"ds-meter-seg ds-lit\"></span><span class=\"ds-meter-seg ds-lit\"></span><span class=\"ds-meter-seg\"></span><span class=\"ds-meter-seg\"></span><span class=\"ds-meter-seg\"></span><span class=\"ds-meter-seg\"></span><span class=\"ds-meter-seg\"></span><span class=\"ds-meter-seg\"></span><span class=\"ds-meter-seg\"></span><span class=\"ds-meter-seg\"></span><span class=\"ds-meter-seg\"></span><span class=\"ds-meter-seg\"></span><span class=\"ds-meter-seg\"></span><span class=\"ds-meter-seg\"></span><span class=\"ds-meter-seg\"></span><span class=\"ds-meter-seg\"></span><span class=\"ds-meter-seg\"></span><span class=\"ds-meter-seg\"></span></div>",
+      "css": ".ds-meter { display: flex; gap: 3px; } .ds-meter-seg { width: 8px; height: 10px; border-radius: 1px; background: #26262c; } .ds-meter-seg.ds-lit { background: #ff3b30; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Rhythm Machine Register",
+    "overview": "Every surface is the faceplate of an early-80s rhythm machine. Records are steps you arm, acknowledgement is a lit LED, the year is a twelve-key step row, and totals read off 7-segment LED windows. The world is a single matte charcoal instrument: raised modules on a panel, recessed display wells, physical keycaps, silkscreened caps labels. It explicitly refuses the white-card SaaS dashboard with an indigo accent.\n\nDensity is instrument-grade: small mono type, tight silkscreen labels, hairline seams between modules, tabular numerals everywhere numbers appear. Color is scarce and semantic — the step-key quartet (red / orange / yellow / white) and two status LEDs (green / amber) are the only chroma on an otherwise near-black panel. Light is the interface's voice: the only glow anywhere comes from lit LEDs, lit segments, and key windows.\n\nMode is Operate on all three surfaces (login, onboarding, admin console). The product identity is the AR-9 model plate (Michroma), owned by the Qugen Pathlabs group.",
+    "keyCharacteristics": [
+      "Matte charcoal hardware panel with brushed-plastic grain on the chassis",
+      "Step-key quartet accents cycled Q1→Q4 (red, orange, yellow, white)",
+      "LED glow as the only glow; red 7-segment readouts, amber only for pending",
+      "Silkscreen-gray mono caps labels (10px, 0.14em) as the labeling voice",
+      "Physicality via raised modules, recessed wells, and pressable keycaps — never floating cards"
+    ],
+    "rules": [
+      { "name": "The One Glow Rule", "body": "Glow (box-shadow bloom or SVG drop-shadow) appears only on lit LEDs, lit 7-segment content, lit key windows, and the chase light. Text, borders, buttons, and cards never glow.", "section": "colors" },
+      { "name": "The Amber Pending Rule", "body": "Pending = amber LED blinking + amber readout. Acknowledged = green LED steady. Every other readout is red. Amber and green never appear outside status.", "section": "colors" },
+      { "name": "The Silkscreen Floor Rule", "body": "Tertiary silkscreen text never drops below #85858e — that value holds 4.5:1 on module surfaces.", "section": "colors" },
+      { "name": "The Hue-Preserved Unlit Rule", "body": "Unlit step keys use dedicated low-lightness variants of their own hue (#63201b / #63400a / #5d520c / #595955) — never brightness() or saturate() filters, which muddy the hue.", "section": "colors" },
+      { "name": "The Earned Anton Rule", "body": "Anton appears only at moments of statement; on the admin console exactly one — the timeline year. If a heading can be a silkscreen label, it is one.", "section": "typography" },
+      { "name": "The Tabular Instrument Rule", "body": "Every numeric column and inline count uses tabular-nums; numbers read as instrument readouts.", "section": "typography" },
+      { "name": "The Faceplate Rule", "body": "Elevation states physical construction (raised / recessed / pressable), never hierarchy or hover flair. Hover changes color or border, never shadow or position — the only positional response is the keycap's 1px press.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do keep every glow attached to a light source — LEDs, lit segments, key windows, the chase light (The One Glow Rule).",
+      "Do format currency as ₹ + en-IN grouping with zero decimals via inr(); segment displays get digits + en-IN separators only via segDigits() — never a ₹ glyph in LED cells.",
+      "Do speak status in LED vocabulary: pending = amber blinking, acknowledged/healthy = green steady, readouts otherwise red.",
+      "Do label with silkscreen caps (10px mono, 0.14em) and keep tertiary text at or above #85858e.",
+      "Do draw icons as inline SVG in the Heroicons manner (1.5–2 stroke); size chart and meter color from the step-key quartet, cycled in order.",
+      "Do keep motion state-conveying and short: 150–300ms GSAP entrances (power2/power3.out, opacity + ≤20px rise), the 620ms chase, the 1.1s LED blink — all collapsed under prefers-reduced-motion.",
+      "Do group location data by name, not id — historical duplicate location rows share a name."
+    ],
+    "donts": [
+      "Don't build white cards, light surfaces, or an indigo/blue accent — the refused SaaS dashboard is the anti-reference.",
+      "Don't use Anton outside statement moments, or Michroma outside the AR-9 plate; no proportional or system display faces anywhere.",
+      "Don't dim keys or accents with brightness()/saturate() filters — use the hue-preserved unlit variants.",
+      "Don't add hover elevation, floating shadows, or glowing text/borders/buttons; hover changes color only, and only keycaps move (1px press).",
+      "Don't use unicode glyphs or icon fonts as icons.",
+      "Don't put amber or green anywhere except status LEDs and the pending readout."
+    ]
+  }
+}

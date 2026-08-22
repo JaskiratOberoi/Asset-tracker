@@ -470,9 +470,14 @@ const STEP_KEY_COLOR = ['key-red', 'key-orange', 'key-yellow']
                       <button
                         v-if="companyId && !addingLocation"
                         type="button"
-                        class="silk-label text-silk hover:text-paper transition-colors"
+                        class="silk-label text-silk hover:text-paper transition-colors inline-flex items-center gap-1"
                         @click="addingLocation = true"
-                      >+ New site</button>
+                      >
+                        <svg class="w-3 h-3" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                        </svg>
+                        New site
+                      </button>
                     </div>
 
                     <template v-if="!addingLocation">

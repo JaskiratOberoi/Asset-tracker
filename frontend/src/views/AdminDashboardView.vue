@@ -133,7 +133,12 @@ const recentAssets = computed(() =>
           </div>
         </div>
         <div class="flex items-center gap-2 shrink-0">
-          <a href="/onboarding" class="panel-btn-primary py-2">+ Register asset</a>
+          <a href="/onboarding" class="panel-btn-primary py-2">
+            <svg class="w-3.5 h-3.5" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+            </svg>
+            Register asset
+          </a>
           <button class="panel-btn-secondary py-2" @click="handleLogout">Log out</button>
         </div>
       </div>

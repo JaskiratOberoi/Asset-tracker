@@ -422,7 +422,12 @@ async function doDelete() {
       </div>
       <p class="text-[15px] text-paper font-medium mb-1.5">The register is empty</p>
       <p class="text-[13px] text-silkfaint mb-6">Write the first asset in and its key lights up here.</p>
-      <a href="/onboarding" class="panel-btn-primary">+ Register an asset</a>
+      <a href="/onboarding" class="panel-btn-primary">
+        <svg class="w-3.5 h-3.5" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+        </svg>
+        Register an asset
+      </a>
     </div>
 
     <!-- ============ filtered to zero ============ -->
