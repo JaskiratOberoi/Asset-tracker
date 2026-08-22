@@ -590,14 +590,22 @@ const STEP_KEY_COLOR = ['key-red', 'key-orange', 'key-yellow']
                   class="panel-btn-secondary"
                   :disabled="isSubmitting"
                   @click="prevStep"
-                >← Previous</button>
+                >
+                  <svg class="w-3.5 h-3.5" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+                  </svg>
+                  Previous
+                </button>
                 <span v-else></span>
                 <button type="submit" class="panel-btn-primary min-w-[10rem]" :disabled="isSubmitting">
                   <svg v-if="isSubmitting" class="w-3.5 h-3.5 animate-spin" width="14" height="14" viewBox="0 0 24 24" fill="none">
                     <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" opacity="0.25" />
                     <path d="M12 2a10 10 0 019.95 9" stroke="currentColor" stroke-width="3" stroke-linecap="round" />
                   </svg>
-                  {{ isSubmitting ? 'Writing' : currentStep === totalSteps ? 'Write record' : 'Next →' }}
+                  {{ isSubmitting ? 'Writing' : currentStep === totalSteps ? 'Write record' : 'Next' }}
+                  <svg v-if="!isSubmitting && currentStep < totalSteps" class="w-3.5 h-3.5" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+                  </svg>
                 </button>
               </div>
             </form>

@@ -180,7 +180,6 @@ const recentAssets = computed(() =>
                 :value="statsLoading ? '--' : String(assets.length)"
                 :height="40"
                 :min-cells="2"
-                color="#ffe100"
               />
             </div>
             <p class="mt-2.5 text-[11px] text-silkdim">
@@ -220,7 +219,6 @@ const recentAssets = computed(() =>
                 :value="statsLoading ? '--' : String(activeSites)"
                 :height="40"
                 :min-cells="2"
-                color="#3ddc68"
               />
             </div>
             <p class="mt-2.5 text-[11px] text-silkdim">
@@ -239,20 +237,28 @@ const recentAssets = computed(() =>
               {{ yearCount }} record{{ yearCount === 1 ? '' : 's' }} · {{ inr(yearSpend) }} in {{ timelineYear }}
             </span>
           </div>
-          <div class="flex items-center gap-1">
+          <div class="flex items-center gap-1.5">
             <button
               class="panel-btn-ghost px-2 py-1"
               :disabled="yearsInData.indexOf(timelineYear) <= 0"
               aria-label="Previous year"
               @click="shiftYear(-1)"
-            >‹</button>
-            <span class="font-mono text-[13px] font-semibold text-paper tabular-nums w-12 text-center">{{ timelineYear }}</span>
+            >
+              <svg class="w-3.5 h-3.5" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+              </svg>
+            </button>
+            <span class="font-display text-2xl leading-none text-paper tabular-nums w-16 text-center">{{ timelineYear }}</span>
             <button
               class="panel-btn-ghost px-2 py-1"
               :disabled="yearsInData.indexOf(timelineYear) >= yearsInData.length - 1"
               aria-label="Next year"
               @click="shiftYear(1)"
-            >›</button>
+            >
+              <svg class="w-3.5 h-3.5" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+              </svg>
+            </button>
           </div>
         </div>
         <div class="px-4 sm:px-5 py-4">

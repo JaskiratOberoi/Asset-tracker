@@ -78,7 +78,7 @@ function press(i: number) {
           ></span>
           <span
             class="absolute bottom-1.5 left-1/2 -translate-x-1/2 font-mono text-[10px] font-semibold"
-            :class="Math.floor(i / 3) === 3 ? 'text-black/60' : 'text-black/70'"
+            :class="m.count > 0 ? (Math.floor(i / 3) === 3 ? 'text-black/60' : 'text-black/70') : 'text-paper/40'"
           >{{ m.count > 0 ? m.count : '·' }}</span>
         </button>
       </div>

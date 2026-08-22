@@ -16,7 +16,7 @@ export default {
         seamlight: '#33333b',    // hover/active hairlines
         silk: '#bdbdbd',         // silkscreen label gray
         silkdim: '#8a8a92',      // secondary silkscreen
-        silkfaint: '#5c5c64',    // tertiary / disabled silkscreen
+        silkfaint: '#85858e',    // tertiary silkscreen (kept ≥4.5:1 on module surfaces)
         paper: '#f2f2f2',        // brightest text (step white)
         stepred: '#ff3b30',
         steporange: '#ff9a00',
@@ -26,7 +26,7 @@ export default {
         ledamber: '#ffb020',
       },
       fontFamily: {
-        mono: ['"Spline Sans Mono"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
+        mono: ['"Spline Sans Mono Variable"', '"Spline Sans Mono"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
         plate: ['Michroma', '"Spline Sans Mono"', 'sans-serif'],
         display: ['Anton', '"Arial Narrow"', 'sans-serif'],
       },

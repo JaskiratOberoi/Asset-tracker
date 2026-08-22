@@ -123,11 +123,14 @@
   .key-white  { background-color: #d9d9d4; }
   .key-dark   { background-color: #232327; }
 
-  .key-red.key-unlit,
-  .key-orange.key-unlit,
-  .key-yellow.key-unlit,
-  .key-white.key-unlit {
-    filter: brightness(0.55) saturate(0.75);
+  /* unlit keys keep their hue at low lightness — dimmed, never muddied */
+  .key-red.key-unlit    { background-color: #63201b; }
+  .key-orange.key-unlit { background-color: #63400a; }
+  .key-yellow.key-unlit { background-color: #5d520c; }
+  .key-white.key-unlit  { background-color: #595955; }
+
+  .key-unlit {
+    background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0) 40%);
   }
 
   /* the small LED window near the top of a key */
@@ -192,7 +195,7 @@
   }
 
   .panel-input::placeholder {
-    color: #5c5c64;
+    color: #8a8a92;
   }
 
   .panel-input:focus {
