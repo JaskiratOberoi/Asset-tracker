@@ -122,6 +122,15 @@ const byCompany = computed(() => {
 })
 
 const METER_SEGMENTS = 24
+
+// instrument row: one station per site, LED lit when the site holds assets
+const siteRow = computed(() =>
+  bySite.value.map(r => ({
+    code: r.name === 'No site' ? 'N/S' : r.name.slice(0, 3).toUpperCase(),
+    name: r.name,
+    count: r.count,
+  }))
+)
 </script>
 
 <template>
@@ -181,6 +190,20 @@ const METER_SEGMENTS = 24
             </div>
           </li>
         </ul>
+      </div>
+      <div v-if="!loading && siteRow.length > 0" class="border-t border-seam px-4 py-3.5">
+        <div class="flex items-start gap-4 overflow-x-auto pb-1">
+          <div
+            v-for="s in siteRow"
+            :key="s.name"
+            class="flex flex-col items-center gap-1.5 shrink-0"
+            :title="`${s.name}: ${s.count} asset${s.count === 1 ? '' : 's'}`"
+          >
+            <span class="silk-label">{{ s.code }}</span>
+            <span class="led" :class="s.count > 0 ? 'led-green' : ''"></span>
+            <span class="font-mono text-[11px] text-silk tabular-nums">{{ s.count }}</span>
+          </div>
+        </div>
       </div>
     </section>
   </div>

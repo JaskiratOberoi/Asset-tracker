@@ -66,6 +66,17 @@ async function handleSubmit() {
 
     <main class="flex-1 flex items-center justify-center px-5 py-12">
       <div ref="card" class="w-full max-w-sm">
+        <div class="mb-8 text-center">
+          <p class="font-plate text-5xl text-paper tracking-wide">AR-9</p>
+          <p class="silk-label mt-3">Computer controlled asset register</p>
+          <div class="mt-4 flex items-center justify-center gap-2" aria-hidden="true">
+            <span class="h-px w-16 bg-seam"></span>
+            <span class="led led-red"></span>
+            <span class="led led-amber"></span>
+            <span class="led led-green"></span>
+            <span class="h-px w-16 bg-seam"></span>
+          </div>
+        </div>
         <div class="panel-module overflow-hidden">
           <div class="module-head">
             <h1 class="silk-label-bright">Operator sign-in</h1>
