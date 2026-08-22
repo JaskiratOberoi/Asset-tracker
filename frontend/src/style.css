@@ -2,86 +2,254 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ============================================================
+   AR-9 panel base
+   ============================================================ */
 @layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  html {
+    background: #0e0e10;
+  }
+
   body {
-    @apply antialiased font-sans;
+    @apply antialiased font-mono bg-chassis text-paper;
+    font-size: 14px;
+    /* fine brushed-plastic grain over the chassis */
+    background-image:
+      radial-gradient(1200px 600px at 50% -10%, rgba(255, 255, 255, 0.03), transparent 60%),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.04 0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  ::selection {
+    background: rgba(255, 59, 48, 0.85);
+    color: #0e0e10;
+  }
+
+  input, textarea {
+    caret-color: #ff3b30;
+  }
+
+  :focus-visible {
+    outline: 2px solid #ff3b30;
+    outline-offset: 2px;
+  }
+
+  /* Number columns everywhere read as instrument readouts */
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
   }
 }
 
 @layer utilities {
-  /* Animated gradient background */
-  .gradient-animate {
-    background-size: 200% 200%;
-    animation: gradient-shift 15s ease infinite;
-  }
-  
-  @keyframes gradient-shift {
-    0% {
-      background-position: 0% 50%;
-    }
-    50% {
-      background-position: 100% 50%;
-    }
-    100% {
-      background-position: 0% 50%;
-    }
-  }
-  
-  /* Glowing focus ring */
-  .glow-ring {
-    box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.3);
-  }
-  
-  /* Glassmorphism effect */
-  .glass {
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+  /* ---------- silkscreen labels ---------- */
+  .silk-label {
+    @apply font-mono uppercase text-silkdim;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.14em;
   }
 
-  /* Custom Scrollbar */
-  .custom-scrollbar {
-    scrollbar-width: thin;
-    scrollbar-color: rgba(148, 163, 184, 0.5) transparent;
+  .silk-label-bright {
+    @apply font-mono uppercase text-silk;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
   }
 
-  .custom-scrollbar::-webkit-scrollbar {
+  /* ---------- panel modules (the bento cells) ---------- */
+  .panel-module {
+    @apply bg-module border border-seam rounded-md shadow-module;
+  }
+
+  .panel-well {
+    @apply bg-well border border-black rounded shadow-well;
+  }
+
+  /* module title bar: silkscreen caps + rule, like a section of the faceplate */
+  .module-head {
+    @apply flex items-baseline justify-between gap-3 border-b border-seam px-4 py-2.5;
+  }
+
+  /* ---------- LEDs ---------- */
+  .led {
+    @apply inline-block rounded-[2px];
     width: 8px;
     height: 8px;
+    background: #3a3a40;
+    box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.6);
   }
 
-  .custom-scrollbar::-webkit-scrollbar-track {
-    background: transparent;
-    border-radius: 10px;
+  .led-red {
+    background: #ff3b30;
+    box-shadow: 0 0 6px 1px rgba(255, 59, 48, 0.7), inset 0 0 2px rgba(255, 255, 255, 0.5);
   }
 
-  .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: rgba(148, 163, 184, 0.5);
-    border-radius: 10px;
-    transition: background 0.2s ease;
+  .led-green {
+    background: #3ddc68;
+    box-shadow: 0 0 6px 1px rgba(61, 220, 104, 0.6), inset 0 0 2px rgba(255, 255, 255, 0.5);
   }
 
-  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: rgba(148, 163, 184, 0.7);
+  .led-amber {
+    background: #ffb020;
+    box-shadow: 0 0 6px 1px rgba(255, 176, 32, 0.65), inset 0 0 2px rgba(255, 255, 255, 0.5);
   }
 
-  /* Table Container */
-  .table-container {
-    position: relative;
+  .led-blink {
+    animation: led-blink 1.1s steps(1) infinite;
   }
 
-  /* Shimmer animation for progress bars */
-  @keyframes shimmer {
-    0% {
-      transform: translateX(-100%);
+  @keyframes led-blink {
+    0%, 60% { opacity: 1; }
+    61%, 100% { opacity: 0.25; }
+  }
+
+  /* ---------- step keys ---------- */
+  .step-key {
+    @apply relative select-none rounded-[4px] border border-black/60 shadow-key transition-transform duration-100;
+    background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0) 40%);
+  }
+
+  .step-key:active {
+    transform: translateY(1px);
+    @apply shadow-keydown;
+  }
+
+  .key-red    { background-color: #e0342a; }
+  .key-orange { background-color: #e08a00; }
+  .key-yellow { background-color: #e0c700; }
+  .key-white  { background-color: #d9d9d4; }
+  .key-dark   { background-color: #232327; }
+
+  .key-red.key-unlit,
+  .key-orange.key-unlit,
+  .key-yellow.key-unlit,
+  .key-white.key-unlit {
+    filter: brightness(0.55) saturate(0.75);
+  }
+
+  /* the small LED window near the top of a key */
+  .key-window {
+    @apply absolute left-1/2 -translate-x-1/2 rounded-[2px];
+    top: 14%;
+    width: 34%;
+    height: 10%;
+    background: rgba(0, 0, 0, 0.55);
+    box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.8);
+  }
+
+  .key-window-lit {
+    background: #fff7f0;
+    box-shadow: 0 0 8px 2px rgba(255, 235, 200, 0.85), inset 0 0 2px rgba(255, 255, 255, 0.9);
+  }
+
+  /* ---------- flat panel buttons (RUN / CLEAR vocabulary) ---------- */
+  .panel-btn {
+    @apply inline-flex items-center justify-center gap-2 font-mono uppercase rounded-[4px] border transition-colors duration-150;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    padding: 0.625rem 1.125rem;
+  }
+
+  .panel-btn-primary {
+    @apply panel-btn bg-stepred text-black border-stepred;
+  }
+
+  .panel-btn-primary:hover:not(:disabled) {
+    background-color: #ff554b;
+    border-color: #ff554b;
+  }
+
+  .panel-btn-secondary {
+    @apply panel-btn bg-transparent text-silk border-seamlight;
+  }
+
+  .panel-btn-secondary:hover:not(:disabled) {
+    @apply text-paper border-silkfaint;
+  }
+
+  .panel-btn-ghost {
+    @apply panel-btn bg-transparent text-silkdim border-transparent;
+  }
+
+  .panel-btn-ghost:hover:not(:disabled) {
+    @apply text-paper;
+  }
+
+  .panel-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  /* ---------- inputs ---------- */
+  .panel-input {
+    @apply w-full font-mono bg-well text-paper border border-seam rounded-[4px] shadow-well transition-colors duration-150;
+    font-size: 13px;
+    padding: 0.625rem 0.75rem;
+  }
+
+  .panel-input::placeholder {
+    color: #5c5c64;
+  }
+
+  .panel-input:focus {
+    outline: none;
+    border-color: #ff3b30;
+    box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 59, 48, 0.4);
+  }
+
+  .panel-input:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* ---------- segment display window ---------- */
+  .seg-window {
+    @apply panel-well flex items-center justify-end overflow-hidden;
+    padding: 0.5rem 0.75rem;
+  }
+
+  /* ---------- scrollbars ---------- */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #33333b #131316;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #131316;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #33333b;
+    border-radius: 5px;
+    border: 2px solid #131316;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #4a4a54;
+  }
+
+  /* ---------- chase light ---------- */
+  @keyframes chase-glow {
+    0%, 100% { box-shadow: 0 0 6px 1px rgba(255, 59, 48, 0.7); }
+    50% { box-shadow: 0 0 10px 3px rgba(255, 59, 48, 0.9); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .led-blink,
+    .step-key,
+    * {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
     }
-    100% {
-      transform: translateX(100%);
-    }
-  }
-
-  .animate-shimmer {
-    animation: shimmer 2s infinite;
   }
 }

@@ -177,6 +177,43 @@ export async function getSpendsByCompany(): Promise<Array<{ id: string; name: st
   return res.json()
 }
 
+export async function createLocation(name: string, companyId: string) {
+  const res = await fetch(`${BASE_URL}/api/locations`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify({ name, company_id: companyId })
+  })
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error((data as { error?: string }).error || 'Failed to create location')
+  return data as { id: string; name: string; company_id: string }
+}
+
+export async function uploadAssetBill(id: string, file: File) {
+  const token = getToken()
+  const headers: Record<string, string> = {}
+  if (token) headers['Authorization'] = `Bearer ${token}`
+  const fd = new FormData()
+  fd.append('billFile', file)
+  const res = await fetch(`${BASE_URL}/api/assets/${id}/bill`, {
+    method: 'POST',
+    headers,
+    body: fd
+  })
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error((data as { error?: string }).error || 'Failed to upload bill')
+  return data
+}
+
+export async function deleteAssetBill(id: string) {
+  const res = await fetch(`${BASE_URL}/api/assets/${id}/bill`, {
+    method: 'DELETE',
+    headers: getHeaders(true)
+  })
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error((data as { error?: string }).error || 'Failed to remove bill')
+  return data
+}
+
 export async function getFileViewUrl(fileId: string): Promise<string> {
   const res = await fetch(`${BASE_URL}/api/files/${fileId}`, {
     headers: getHeaders(true)

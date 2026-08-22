@@ -1,252 +1,145 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { login } from '../lib/api'
 import { gsap } from 'gsap'
+import { login } from '../lib/api'
 
 const router = useRouter()
 const route = useRoute()
+
 const email = ref('')
 const password = ref('')
 const showPassword = ref(false)
-const error = ref<string | null>(null)
 const isLoading = ref(false)
-const loginContainer = ref<HTMLElement | null>(null)
-const bgLayer = ref<HTMLElement | null>(null)
+const error = ref('')
 
-// Mouse position for interactive background (normalized -1 to 1)
-const mouse = ref({ x: 0, y: 0 })
-const targetMouse = ref({ x: 0, y: 0 })
+const card = ref<HTMLElement | null>(null)
 
-const onMouseMove = (e: MouseEvent) => {
-  const w = window.innerWidth
-  const h = window.innerHeight
-  targetMouse.value.x = (e.clientX / w) * 2 - 1
-  targetMouse.value.y = (e.clientY / h) * 2 - 1
+function applySessionNotice() {
+  if (route.query.reason === 'session_invalid') {
+    error.value = 'Your session could not be verified. Please sign in again.'
+  }
 }
 
-let rafId = 0
-const lerp = (a: number, b: number, t: number) => a + (b - a) * t
-const animateMouse = () => {
-  mouse.value.x = lerp(mouse.value.x, targetMouse.value.x, 0.08)
-  mouse.value.y = lerp(mouse.value.y, targetMouse.value.y, 0.08)
-  rafId = requestAnimationFrame(animateMouse)
-}
+watch(() => route.query.reason, applySessionNotice)
 
-// Show message when redirected back from admin (e.g. session could not be verified)
-watch(
-  () => route.query.reason,
-  (reason) => {
-    if (reason === 'session_invalid') {
-      error.value = 'Your session could not be verified. Please sign in again.'
-    }
-  },
-  { immediate: true }
-)
+onMounted(() => {
+  applySessionNotice()
+  if (card.value) {
+    gsap.fromTo(
+      card.value,
+      { opacity: 0, y: 16 },
+      { opacity: 1, y: 0, duration: 0.45, ease: 'power3.out' }
+    )
+  }
+})
 
-const handleLogin = async () => {
-  error.value = null
+async function handleSubmit() {
+  error.value = ''
   isLoading.value = true
-
   try {
     await login(email.value, password.value)
     router.push('/admin')
-  } catch (err: unknown) {
-    const message = (err instanceof Error ? err.message : null) || 'Login failed. Please check your credentials.'
-    error.value = message
-    console.error('Login error:', err)
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : 'Login failed'
   } finally {
     isLoading.value = false
   }
 }
-
-onMounted(() => {
-  if (loginContainer.value) {
-    gsap.from(loginContainer.value, {
-      opacity: 0,
-      y: 20,
-      duration: 0.4,
-      ease: 'power2.out'
-    })
-  }
-  // Floating animation for background orbs
-  const blobEls = bgLayer.value?.querySelectorAll('[data-blob]')
-  blobEls?.forEach((el, i) => {
-    const sign = i % 2 === 0 ? 1 : -1
-    gsap.to(el, {
-      x: `+=${80 * sign}`,
-      y: `+=${40 * sign}`,
-      duration: 8 + i * 2,
-      repeat: -1,
-      yoyo: true,
-      ease: 'sine.inOut'
-    })
-  })
-  rafId = requestAnimationFrame(animateMouse)
-  window.addEventListener('mousemove', onMouseMove)
-})
-
-onUnmounted(() => {
-  cancelAnimationFrame(rafId)
-  window.removeEventListener('mousemove', onMouseMove)
-})
 </script>
 
 <template>
-  <div class="min-h-screen bg-slate-50">
-    <!-- Header - matches AdminDashboardView -->
-    <header class="relative z-20 bg-white border-b border-slate-200 shadow-sm">
-      <div class="max-w-7xl mx-auto px-6 lg:px-8 py-4">
-        <div class="flex items-center gap-3">
-          <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-sm shrink-0">
-            <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M11.25 3.03a.75.75 0 01.75 0l8.25 4.76a.75.75 0 010 1.3L12 13.85 3.75 9.09a.75.75 0 010-1.3l7.5-4.76z" opacity=".9"/>
-              <path d="M3 11.38l8.25 4.77v5.32L3.38 16.9A.75.75 0 013 16.25v-4.87zM21 11.38v4.87a.75.75 0 01-.38.65l-7.87 4.57v-5.32L21 11.38z"/>
-            </svg>
-          </div>
-          <div>
-            <h1 class="text-xl font-semibold text-slate-900">Asset Tracker</h1>
-            <p class="text-sm text-slate-500">Admin console</p>
-          </div>
+  <div class="min-h-screen flex flex-col">
+    <header class="border-b border-seam bg-panel">
+      <div class="max-w-6xl mx-auto px-5 sm:px-8 py-4 flex items-center justify-between">
+        <a href="/onboarding" class="flex items-center gap-3">
+          <span class="font-plate text-lg text-paper tracking-wide">AR-9</span>
+          <span class="hidden sm:block h-4 w-px bg-seamlight"></span>
+          <span class="hidden sm:block silk-label">Asset Register</span>
+        </a>
+        <div class="flex items-center gap-2">
+          <span class="led led-red led-blink"></span>
+          <span class="silk-label">Admin console</span>
         </div>
       </div>
     </header>
 
-    <!-- Main Content -->
-    <main class="relative min-h-[calc(100vh-88px)] flex items-center justify-center overflow-hidden">
-      <!-- Interactive background -->
-      <div ref="bgLayer" class="absolute inset-0 pointer-events-none">
-        <div class="absolute inset-0 bg-gradient-to-br from-slate-50 via-indigo-50/40 to-slate-100" />
-        <!-- Subtle grid -->
-        <div
-          class="absolute inset-0 opacity-[0.4]"
-          style="background-image: linear-gradient(rgba(148,163,184,0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,0.15) 1px, transparent 1px); background-size: 48px 48px;"
-        />
-        <!-- Floating orbs with mouse parallax -->
-        <div
-          class="absolute top-1/4 left-1/4 w-[320px] h-[320px] rounded-full"
-          :style="{ transform: `translate(${mouse.x * 24}px, ${mouse.y * 24}px)` }"
-        >
-          <div
-            data-blob
-            class="absolute inset-0 rounded-full bg-indigo-300/50 blur-3xl"
-          />
-        </div>
-        <div
-          class="absolute top-1/2 right-1/5 w-[280px] h-[280px] rounded-full"
-          :style="{ transform: `translate(${mouse.x * -20}px, ${mouse.y * 20}px)` }"
-        >
-          <div
-            data-blob
-            class="absolute inset-0 rounded-full bg-violet-300/40 blur-3xl"
-          />
-        </div>
-        <div
-          class="absolute bottom-1/4 left-1/3 w-[240px] h-[240px] rounded-full"
-          :style="{ transform: `translate(${mouse.x * 16}px, ${mouse.y * -16}px)` }"
-        >
-          <div
-            data-blob
-            class="absolute inset-0 rounded-full bg-slate-300/35 blur-3xl"
-          />
-        </div>
-        <div
-          class="absolute top-1/3 right-1/3 w-[200px] h-[200px] rounded-full"
-          :style="{ transform: `translate(${mouse.x * -12}px, ${mouse.y * -12}px)` }"
-        >
-          <div
-            data-blob
-            class="absolute inset-0 rounded-full bg-indigo-200/30 blur-2xl"
-          />
-        </div>
-        <div
-          class="absolute bottom-1/3 right-1/2 w-[180px] h-[180px] rounded-full"
-          :style="{ transform: `translate(${mouse.x * 10}px, ${mouse.y * 10}px)` }"
-        >
-          <div
-            data-blob
-            class="absolute inset-0 rounded-full bg-violet-200/25 blur-2xl"
-          />
-        </div>
-      </div>
-
-      <div ref="loginContainer" class="relative z-10 w-full max-w-md mx-auto px-8 py-12">
-        <!-- Card - same style as admin dashboard bento cards -->
-        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-8">
-          <div class="mb-8">
-            <h2 class="text-xl font-semibold text-slate-900 mb-1">Sign in</h2>
-            <p class="text-sm text-slate-500">Sign in to access the admin panel</p>
+    <main class="flex-1 flex items-center justify-center px-5 py-12">
+      <div ref="card" class="w-full max-w-sm">
+        <div class="panel-module overflow-hidden">
+          <div class="module-head">
+            <h1 class="silk-label-bright">Operator sign-in</h1>
+            <span class="silk-label text-silkfaint">SYS·AUTH</span>
           </div>
 
-          <!-- Error Message -->
-          <div
-            v-if="error"
-            role="alert"
-            class="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg"
-          >
-            <p class="text-sm font-medium text-red-800">{{ error }}</p>
-          </div>
+          <form class="p-5 sm:p-6 space-y-5" @submit.prevent="handleSubmit">
+            <div
+              v-if="error"
+              role="alert"
+              class="panel-well flex items-start gap-2.5 px-3.5 py-3"
+            >
+              <span class="led led-red led-blink mt-1 shrink-0"></span>
+              <p class="text-[13px] leading-snug text-stepred">{{ error }}</p>
+            </div>
 
-          <!-- Login Form -->
-          <form @submit.prevent="handleLogin" class="space-y-6">
             <div>
-              <label for="email" class="block text-sm font-medium text-slate-700 mb-2">
-                Email or username
-              </label>
+              <label for="login-email" class="silk-label block mb-1.5">Email or username</label>
               <input
-                id="email"
+                id="login-email"
                 v-model="email"
                 type="text"
-                required
                 autocomplete="username"
-                class="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
-                placeholder="admin or admin@example.com"
+                required
                 :disabled="isLoading"
+                class="panel-input"
+                placeholder="admin or admin@example.com"
               />
             </div>
 
             <div>
-              <label for="password" class="block text-sm font-medium text-slate-700 mb-2">
-                Password
-              </label>
+              <label for="login-password" class="silk-label block mb-1.5">Password</label>
               <div class="relative">
                 <input
-                  id="password"
+                  id="login-password"
                   v-model="password"
                   :type="showPassword ? 'text' : 'password'"
-                  required
                   autocomplete="current-password"
-                  class="w-full px-4 py-3 pr-12 bg-white border border-slate-300 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
-                  placeholder="Enter your password"
+                  required
                   :disabled="isLoading"
+                  class="panel-input pr-11"
+                  placeholder="••••••••"
                 />
                 <button
                   type="button"
-                  @click="showPassword = !showPassword"
-                  class="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition"
-                  :aria-label="showPassword ? 'Hide password' : 'Show password'"
                   tabindex="-1"
+                  class="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-silkfaint hover:text-silk transition-colors"
+                  :aria-label="showPassword ? 'Hide password' : 'Show password'"
+                  @click="showPassword = !showPassword"
                 >
-                  <svg v-if="showPassword" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                  <svg v-if="!showPassword" class="w-4.5 h-4.5" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                   </svg>
-                  <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  <svg v-else class="w-4.5 h-4.5" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" />
                   </svg>
                 </button>
               </div>
             </div>
 
-            <button
-              type="submit"
-              :disabled="isLoading"
-              class="w-full py-3 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
-            >
-              <span v-if="isLoading">Signing in...</span>
-              <span v-else>Sign in</span>
+            <button type="submit" :disabled="isLoading" class="panel-btn-primary w-full py-3">
+              <svg v-if="isLoading" class="w-3.5 h-3.5 animate-spin" width="14" height="14" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" opacity="0.25" />
+                <path d="M12 2a10 10 0 019.95 9" stroke="currentColor" stroke-width="3" stroke-linecap="round" />
+              </svg>
+              {{ isLoading ? 'Signing in' : 'Sign in' }}
             </button>
           </form>
+
+          <div class="border-t border-seam px-5 py-3 flex items-center justify-between">
+            <span class="silk-label text-silkfaint">Qugen Pathlabs group</span>
+            <a href="/onboarding" class="silk-label text-silk hover:text-paper transition-colors">← Register an asset</a>
+          </div>
         </div>
       </div>
     </main>

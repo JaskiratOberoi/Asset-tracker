@@ -1,246 +1,187 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Bar, Doughnut } from 'vue-chartjs'
 import {
   Chart as ChartJS,
   CategoryScale,
   LinearScale,
   BarElement,
-  ArcElement,
   Title,
   Tooltip,
-  Legend
+  Legend,
 } from 'chart.js'
+import { Bar } from 'vue-chartjs'
+import type { AssetRecord, Company, LocationRow } from '../lib/useRegister'
+import { inr } from '../lib/useRegister'
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Title, Tooltip, Legend)
-
-interface AssetLike {
-  id: string
-  details: any
-  company_id: string
-  location_id: string | null
-  locations?: { name: string } | null
-}
+ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
+ChartJS.defaults.font.family = '"Spline Sans Mono", ui-monospace, monospace'
+ChartJS.defaults.font.size = 10
 
 const props = defineProps<{
-  assets: AssetLike[]
-  locations: Array<{ id: string; name: string; company_id: string }>
-  companies: Array<{ id: string; name: string }>
+  assets: AssetRecord[]
+  locations: LocationRow[]
+  companies: Company[]
   loading: boolean
 }>()
 
-const PALETTE = [
-  'rgba(99, 102, 241, 0.85)',   // indigo
-  'rgba(16, 185, 129, 0.85)',   // emerald
-  'rgba(59, 130, 246, 0.85)',   // blue
-  'rgba(245, 158, 11, 0.85)',   // amber
-  'rgba(236, 72, 153, 0.85)',   // pink
-  'rgba(139, 92, 246, 0.85)',   // violet
-  'rgba(20, 184, 166, 0.85)',   // teal
-  'rgba(249, 115, 22, 0.85)',   // orange
-  'rgba(100, 116, 139, 0.85)',  // slate
-  'rgba(217, 70, 239, 0.85)',   // fuchsia
-  'rgba(34, 197, 94, 0.85)',    // green
-  'rgba(6, 182, 212, 0.85)'     // cyan
-]
-const colors = (n: number) => Array.from({ length: n }, (_, i) => PALETTE[i % PALETTE.length])
+// step-key quartet, cycled
+const KEYS = ['#ff3b30', '#ff9a00', '#ffe100', '#f2f2f2']
 
-const assetCost = (a: AssetLike): number =>
-  typeof a.details?.cost === 'number' && !Number.isNaN(a.details.cost) ? a.details.cost : 0
-
-const inrFull = (n: number) =>
-  '₹' + n.toLocaleString('en-IN', { maximumFractionDigits: 0 })
-const inrCompact = (n: number) =>
-  '₹' + n.toLocaleString('en-IN', { notation: 'compact', maximumFractionDigits: 1 })
-
-// Aggregate assets per location NAME. The API joins each asset to its location row and
-// returns the name, so grouping by name stays correct even if the locations table has
-// duplicate rows for the same site (a known seed-migration quirk).
-const byLocation = computed(() => {
-  const agg = new Map<string, { name: string; count: number; spend: number }>()
+// ---- spend + count per site (grouped by location NAME on purpose: historical
+// duplicate location rows share a name; see AssetsTable) ----
+const bySite = computed(() => {
+  const map = new Map<string, { spend: number; count: number }>()
   for (const a of props.assets) {
-    const name = a.locations?.name ?? 'No location'
-    const entry = agg.get(name) ?? { name, count: 0, spend: 0 }
+    const key = a.locations?.name ?? 'No site'
+    const entry = map.get(key) ?? { spend: 0, count: 0 }
+    const c = a.details?.cost
+    if (typeof c === 'number' && Number.isFinite(c)) entry.spend += c
     entry.count += 1
-    entry.spend += assetCost(a)
-    agg.set(name, entry)
+    map.set(key, entry)
   }
-  return [...agg.values()].sort((x, y) => y.spend - x.spend)
+  return [...map.entries()]
+    .map(([name, v]) => ({ name, ...v }))
+    .sort((a, b) => b.spend - a.spend)
 })
 
-const byCompany = computed(() => {
-  const compName = new Map(props.companies.map((c) => [c.id, c.name]))
-  const agg = new Map<string, { name: string; count: number }>()
-  for (const a of props.assets) {
-    const name = compName.get(a.company_id) ?? 'Unknown'
-    const entry = agg.get(a.company_id) ?? { name, count: 0 }
-    entry.count += 1
-    agg.set(a.company_id, entry)
-  }
-  return [...agg.values()].sort((x, y) => y.count - x.count)
-})
+const totalSpend = computed(() => bySite.value.reduce((s, r) => s + r.spend, 0))
 
-const spendByLocationData = computed(() => ({
-  labels: byLocation.value.map((l) => l.name),
+const spendChartData = computed(() => ({
+  labels: bySite.value.map(r => r.name),
   datasets: [
     {
-      label: 'Spend',
-      backgroundColor: colors(byLocation.value.length),
-      borderRadius: 6,
-      data: byLocation.value.map((l) => l.spend)
-    }
-  ]
+      data: bySite.value.map(r => r.spend),
+      backgroundColor: bySite.value.map((_, i) => KEYS[i % KEYS.length] + 'd9'),
+      hoverBackgroundColor: bySite.value.map((_, i) => KEYS[i % KEYS.length]),
+      borderRadius: 2,
+      maxBarThickness: 42,
+    },
+  ],
 }))
 
-const countByLocationData = computed(() => ({
-  labels: byLocation.value.map((l) => l.name),
-  datasets: [
-    {
-      label: 'Assets',
-      backgroundColor: colors(byLocation.value.length),
-      borderRadius: 6,
-      data: byLocation.value.map((l) => l.count)
-    }
-  ]
-}))
-
-const companyDoughnutData = computed(() => ({
-  labels: byCompany.value.map((c) => c.name),
-  datasets: [
-    {
-      backgroundColor: colors(byCompany.value.length),
-      borderWidth: 2,
-      borderColor: '#ffffff',
-      data: byCompany.value.map((c) => c.count)
-    }
-  ]
-}))
-
-const baseTicks = { font: { size: 11, weight: '500' as const }, color: '#64748b' }
-
-const spendChartOptions: any = {
+const spendChartOptions = computed(() => ({
   responsive: true,
   maintainAspectRatio: false,
   plugins: {
     legend: { display: false },
     tooltip: {
-      backgroundColor: 'rgba(15, 23, 42, 0.95)',
-      padding: 12,
-      cornerRadius: 8,
+      backgroundColor: 'rgba(10, 10, 12, 0.95)',
+      borderColor: '#33333b',
+      borderWidth: 1,
+      titleColor: '#f2f2f2',
+      bodyColor: '#bdbdbd',
+      cornerRadius: 4,
+      padding: 10,
       callbacks: {
-        label: (ctx: { raw: unknown }) => ` ${inrFull(Number(ctx.raw))}`
-      }
-    }
+        label: (ctx: { dataIndex: number }) => {
+          const row = bySite.value[ctx.dataIndex]
+          if (!row) return ''
+          return `${inr(row.spend)} · ${row.count} asset${row.count === 1 ? '' : 's'}`
+        },
+      },
+    },
   },
   scales: {
+    x: {
+      grid: { display: false },
+      ticks: { color: '#8a8a92' },
+      border: { color: '#26262c' },
+    },
     y: {
-      beginAtZero: true,
-      grid: { color: 'rgba(148, 163, 184, 0.1)' },
+      grid: { color: 'rgba(255, 255, 255, 0.05)' },
+      border: { display: false },
       ticks: {
-        ...baseTicks,
-        callback: (value: number | string) => (typeof value === 'number' ? inrCompact(value) : value)
-      }
+        color: '#8a8a92',
+        callback: (v: string | number) =>
+          '₹' + Number(v).toLocaleString('en-IN', { notation: 'compact' }),
+      },
     },
-    x: { grid: { display: false }, ticks: baseTicks }
-  }
-}
-
-const countChartOptions: any = {
-  responsive: true,
-  maintainAspectRatio: false,
-  plugins: {
-    legend: { display: false },
-    tooltip: {
-      backgroundColor: 'rgba(15, 23, 42, 0.95)',
-      padding: 12,
-      cornerRadius: 8,
-      callbacks: {
-        label: (ctx: { raw: unknown }) => ` ${ctx.raw} asset${Number(ctx.raw) === 1 ? '' : 's'}`
-      }
-    }
   },
-  scales: {
-    y: {
-      beginAtZero: true,
-      grid: { color: 'rgba(148, 163, 184, 0.1)' },
-      ticks: { ...baseTicks, precision: 0 }
-    },
-    x: { grid: { display: false }, ticks: baseTicks }
-  }
-}
+}))
 
-const doughnutOptions: any = {
-  responsive: true,
-  maintainAspectRatio: false,
-  cutout: '62%',
-  plugins: {
-    legend: {
-      position: 'bottom' as const,
-      labels: {
-        padding: 12,
-        font: { size: 11, weight: '600' as const },
-        color: '#475569',
-        usePointStyle: true,
-        pointStyle: 'circle'
-      }
-    },
-    tooltip: {
-      backgroundColor: 'rgba(15, 23, 42, 0.95)',
-      padding: 12,
-      cornerRadius: 8,
-      callbacks: {
-        label: (ctx: { label: string; raw: unknown }) =>
-          ` ${ctx.label}: ${ctx.raw} asset${Number(ctx.raw) === 1 ? '' : 's'}`
-      }
-    }
+// ---- register share per company (count + spend meters) ----
+const byCompany = computed(() => {
+  const map = new Map<string, { count: number; spend: number }>()
+  for (const a of props.assets) {
+    const key = a.company_id
+    const entry = map.get(key) ?? { count: 0, spend: 0 }
+    entry.count += 1
+    const c = a.details?.cost
+    if (typeof c === 'number' && Number.isFinite(c)) entry.spend += c
+    map.set(key, entry)
   }
-}
+  const total = props.assets.length || 1
+  return [...map.entries()]
+    .map(([id, v]) => ({
+      id,
+      name: props.companies.find(c => c.id === id)?.name ?? 'Unknown',
+      ...v,
+      share: v.count / total,
+    }))
+    .sort((a, b) => b.count - a.count)
+})
 
-const totalSpend = computed(() => props.assets.reduce((s, a) => s + assetCost(a), 0))
+const METER_SEGMENTS = 24
 </script>
 
 <template>
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 h-full">
-    <!-- Spend by Location (hero, full width) -->
-    <div class="md:col-span-2 bg-white rounded-xl shadow-sm border border-slate-200 p-5">
-      <div class="flex items-baseline justify-between mb-3">
-        <div>
-          <h3 class="text-base font-semibold text-slate-900 mb-0.5">Spend by Location</h3>
-          <p class="text-xs text-slate-500">Total asset value per site</p>
+  <div class="grid lg:grid-cols-12 gap-4">
+    <!-- spend by site -->
+    <section class="bento-card panel-module lg:col-span-7">
+      <div class="module-head">
+        <h2 class="silk-label-bright">Spend by site</h2>
+        <span class="silk-label text-silkfaint">{{ loading ? '—' : inr(totalSpend) + ' total' }}</span>
+      </div>
+      <div class="px-4 py-4 h-64">
+        <div v-if="loading" class="h-full flex items-center justify-center text-[13px] text-silkfaint">
+          Reading register…
         </div>
-        <p v-if="!loading" class="text-sm font-semibold text-slate-700">{{ inrFull(totalSpend) }} total</p>
+        <div v-else-if="bySite.length === 0" class="h-full flex items-center justify-center text-[13px] text-silkfaint">
+          No data on the register yet.
+        </div>
+        <Bar v-else :data="spendChartData" :options="spendChartOptions" />
       </div>
-      <div v-if="loading" class="h-56 flex items-center justify-center text-sm text-slate-400">Loading chart data…</div>
-      <div v-else-if="!byLocation.length" class="h-56 flex items-center justify-center text-sm text-slate-400">No data available</div>
-      <div v-else class="h-56">
-        <Bar :data="spendByLocationData" :options="spendChartOptions" />
-      </div>
-    </div>
+    </section>
 
-    <!-- Assets by Location -->
-    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
-      <div class="mb-3">
-        <h3 class="text-base font-semibold text-slate-900 mb-0.5">Assets by Location</h3>
-        <p class="text-xs text-slate-500">Asset count per site</p>
+    <!-- register share by company -->
+    <section class="bento-card panel-module lg:col-span-5">
+      <div class="module-head">
+        <h2 class="silk-label-bright">Register share by company</h2>
+        <span class="silk-label text-silkfaint">By count</span>
       </div>
-      <div v-if="loading" class="h-48 flex items-center justify-center text-sm text-slate-400">Loading…</div>
-      <div v-else-if="!byLocation.length" class="h-48 flex items-center justify-center text-sm text-slate-400">No data available</div>
-      <div v-else class="h-48">
-        <Bar :data="countByLocationData" :options="countChartOptions" />
+      <div class="px-4 py-4 min-h-[10rem]">
+        <div v-if="loading" class="h-full flex items-center justify-center text-[13px] text-silkfaint">
+          Reading register…
+        </div>
+        <div v-else-if="byCompany.length === 0" class="h-full flex items-center justify-center text-[13px] text-silkfaint">
+          No data on the register yet.
+        </div>
+        <ul v-else class="space-y-4">
+          <li v-for="(c, i) in byCompany" :key="c.id">
+            <div class="flex items-baseline justify-between gap-3 mb-1.5">
+              <span class="text-[13px] text-paper font-medium truncate" :title="c.name">{{ c.name }}</span>
+              <span class="text-[11px] text-silkdim tabular-nums shrink-0">
+                {{ c.count }} · {{ Math.round(c.share * 100) }}% · {{ inr(c.spend) }}
+              </span>
+            </div>
+            <!-- output meter: lit segments proportional to register share -->
+            <div
+              class="flex gap-[3px]"
+              role="img"
+              :aria-label="`${c.name}: ${Math.round(c.share * 100)}% of the register`"
+            >
+              <span
+                v-for="s in METER_SEGMENTS"
+                :key="s"
+                class="h-3 flex-1 rounded-[1px]"
+                :style="s <= Math.max(1, Math.round(c.share * METER_SEGMENTS))
+                  ? { backgroundColor: KEYS[i % KEYS.length], boxShadow: `0 0 4px ${KEYS[i % KEYS.length]}66` }
+                  : { backgroundColor: '#26262c' }"
+              ></span>
+            </div>
+          </li>
+        </ul>
       </div>
-    </div>
-
-    <!-- Assets by Company -->
-    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
-      <div class="mb-3">
-        <h3 class="text-base font-semibold text-slate-900 mb-0.5">Assets by Company</h3>
-        <p class="text-xs text-slate-500">Share of register per company</p>
-      </div>
-      <div v-if="loading" class="h-48 flex items-center justify-center text-sm text-slate-400">Loading…</div>
-      <div v-else-if="!byCompany.length" class="h-48 flex items-center justify-center text-sm text-slate-400">No data available</div>
-      <div v-else class="h-48">
-        <Doughnut :data="companyDoughnutData" :options="doughnutOptions" />
-      </div>
-    </div>
+    </section>
   </div>
 </template>

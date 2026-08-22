@@ -4,9 +4,8 @@
     {
       "name": "frontend-dev",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
-      "cwd": "frontend",
-      "port": 1200
+      "runtimeArgs": ["run", "dev", "--prefix", "X:/Asset-tracker/frontend"],
+      "port": 5173
     }
   ]
 }
